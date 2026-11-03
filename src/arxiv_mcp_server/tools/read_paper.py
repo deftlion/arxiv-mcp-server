@@ -24,7 +24,7 @@ settings = Settings()
 
 read_tool = types.Tool(
     name="read_paper",
-    annotations=ToolAnnotations(readOnlyHint=True),
+    annotations=ToolAnnotations(read_only_hint=True),
     description=(
         "Read the text content of a paper that was previously downloaded via download_paper. "
         "Returns the paper in markdown format, bounded to roughly 12,000 characters by default "
@@ -34,7 +34,7 @@ read_tool = types.Tool(
         "Will fail with a clear error if the paper has not been downloaded yet — call download_paper first. "
         "Workflow: search_papers -> download_paper -> read_paper."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "paper_id": {

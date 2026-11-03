@@ -760,7 +760,7 @@ def test_search_tool_schema_includes_start():
     """Tool schema exposes optional start (>=0) for pagination."""
     from arxiv_mcp_server.tools.search import search_tool
 
-    props = search_tool.inputSchema["properties"]
+    props = search_tool.input_schema["properties"]
     assert "start" in props
     assert props["start"]["type"] == "integer"
     assert props["start"]["minimum"] == 0
@@ -770,7 +770,7 @@ def test_search_tool_schema_includes_abstract_mode_and_defaults():
     """Tool schema documents compact defaults and abstract_mode (#128)."""
     from arxiv_mcp_server.tools.search import search_tool
 
-    props = search_tool.inputSchema["properties"]
+    props = search_tool.input_schema["properties"]
     assert "abstract_mode" in props
     assert props["abstract_mode"]["enum"] == ["none", "snippet", "full"]
     assert "default: 5" in props["max_results"]["description"]

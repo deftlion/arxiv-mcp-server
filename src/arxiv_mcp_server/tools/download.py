@@ -701,7 +701,7 @@ def _wants_force_refresh(arguments: Dict[str, Any]) -> bool:
 
 download_tool = types.Tool(
     name="download_paper",
-    annotations=ToolAnnotations(readOnlyHint=False, openWorldHint=True),
+    annotations=ToolAnnotations(read_only_hint=False, open_world_hint=True),
     description=(
         "Download a paper from arXiv and return its text content. "
         "Tries the HTML version first for clean extraction; falls back to "
@@ -712,7 +712,7 @@ download_tool = types.Tool(
         "continue, or pass return_full_text=true for the entire remaining "
         "paper. Set force=true to re-fetch and overwrite a cached paper (required to replace a newer stored arXiv version with an older one)."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "paper_id": {

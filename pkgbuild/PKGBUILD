@@ -1,0 +1,69 @@
+# Maintainer: Xuelin Yang <xuelin@adamantyee.cc>
+_pkgname=arxiv-mcp-server
+pkgname="python-$_pkgname"
+pkgver=0.8.2
+pkgrel=1
+pkgdesc='A flexible arXiv search and analysis service with MCP protocol support'
+arch=('any')
+url='https://github.com/blazickjp/arxiv-mcp-server'
+license=('Apache-2.0')
+depends=(
+	'python>=3.11'
+	'python-aiofiles>=23.2.1'
+	'python-aiohttp>=3.9.1'
+	'python-anyio>=4.2.0'
+	'python-arxiv>=2.1.0'
+	'python-httpx>=0.24.0'
+	'python-lxml>=4.6.0'
+	'python-requests>=2.25.0'
+	'python-jsonschema>=4.20.0'
+	'python-mcp>=2.3.0'
+	'python-mcp<3.0.0'
+	'python-pydantic>=2.8.0'
+	'python-pydantic-settings>=2.1.0'
+	'python-dateutil>=2.8.2'
+	'python-dotenv>=1.0.0'
+	'python-sse-starlette>=1.8.2'
+	'python-starlette>=0.27.0'
+	'uvicorn>=0.30.0'
+)
+makedepends=(
+	'python-build'
+	'python-hatchling'
+	'python-installer'
+	'python-wheel'
+)
+checkdepends=(
+	'python-aioresponses>=0.7.6'
+	'python-pytest>=8.0.0'
+	'python-pytest-asyncio>=0.23.5'
+	'python-pytest-cov>=4.1.0'
+	'python-pytest-mock>=3.10.0'
+)
+optdepends=(
+	'python-pymupdf4llm: PDF processing support'
+	'python-pymupdf-layout: PDF layout analysis support'
+	'python-numpy: pro semantic search support'
+	'python-sentence-transformers: pro semantic search support'
+)
+# Build the local working tree, including uncommitted changes.
+source=()
+sha256sums=()
+
+build() {
+	cd "$startdir/.."
+	rm -rf "$srcdir/dist"
+	python -m build --wheel --no-isolation --outdir "$srcdir/dist"
+}
+
+check() {
+	cd "$startdir/.."
+	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONPATH="$PWD/src" python -m pytest \
+		-p pytest_asyncio.plugin -p pytest_mock -p pytest_cov
+}
+
+package() {
+	cd "$startdir/.."
+	python -m installer --destdir="$pkgdir" "$srcdir"/dist/*.whl
+	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

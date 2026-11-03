@@ -120,13 +120,13 @@ def test_abstract_tool_description_mentions_workflow():
 
 
 def test_abstract_tool_input_schema_has_paper_id():
-    schema = abstract_tool.inputSchema
+    schema = abstract_tool.input_schema
     assert "paper_id" in schema["properties"]
     assert "paper_id" in schema["required"]
 
 
 def test_abstract_tool_annotations_readonly():
-    assert abstract_tool.annotations.readOnlyHint is True
+    assert abstract_tool.annotations.read_only_hint is True
 
 
 # ---------------------------------------------------------------------------

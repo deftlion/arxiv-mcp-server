@@ -6,7 +6,6 @@ import arxiv
 import pymupdf4llm
 import aiofiles
 import logging
-from pydantic import AnyUrl
 import mcp.types as types
 from ..config import Settings
 from ..arxiv_api import stream_pdf_to_path
@@ -92,10 +91,10 @@ class PaperManager:
                 paper_path = self._get_paper_path(paper_id)
                 resources.append(
                     types.Resource(
-                        uri=AnyUrl(f"file://{str(paper_path)}"),
+                        uri=paper_path.as_uri(),
                         name=paper.title,
                         description=paper.summary,
-                        mimeType="text/markdown",
+                        mime_type="text/markdown",
                     )
                 )
 

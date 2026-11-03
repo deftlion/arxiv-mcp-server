@@ -20,6 +20,9 @@ A local MCP server for agent literature work. The differentiator is original-LaT
 
 ## Install
 
+This checkout requires Python 3.11+ and the MCP Python SDK `>=2.3.0,<3.0.0`.
+Stdio remains the default transport; Streamable HTTP is optional.
+
 The default install is `uvx arxiv-mcp-server`. Command-based integrations need [uv](https://docs.astral.sh/uv/getting-started/installation/), which provides `uvx`. No repository clone or Python environment setup is required.
 
 ```bash

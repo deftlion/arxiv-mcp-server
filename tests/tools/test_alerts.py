@@ -402,15 +402,15 @@ async def test_check_alerts_known_topic_still_succeeds(monkeypatch, alerts_test_
 
 def test_list_and_unwatch_tool_annotations():
     """list_watches is read-only; unwatch_topic is a write."""
-    assert alerts_module.list_watches_tool.annotations.readOnlyHint is True
-    assert alerts_module.unwatch_topic_tool.annotations.readOnlyHint is False
+    assert alerts_module.list_watches_tool.annotations.read_only_hint is True
+    assert alerts_module.unwatch_topic_tool.annotations.read_only_hint is False
 
 
 def test_check_alerts_tool_annotations_not_readonly():
     """check_alerts mutates last_checked, so it must not be marked read-only."""
     ann = alerts_module.check_alerts_tool.annotations
-    assert ann.readOnlyHint is False
-    assert ann.idempotentHint is False
+    assert ann.read_only_hint is False
+    assert ann.idempotent_hint is False
 
 
 @pytest.mark.asyncio

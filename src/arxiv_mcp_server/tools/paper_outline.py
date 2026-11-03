@@ -1176,12 +1176,12 @@ def search_passages(
 
 outline_tool = types.Tool(
     name="get_paper_outline",
-    annotations=ToolAnnotations(readOnlyHint=True),
+    annotations=ToolAnnotations(read_only_hint=True),
     description=(
         "Return a paginated heading outline for a downloaded paper (markdown). "
         "Stable hierarchical section IDs; use read_paper_section to fetch one."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "paper_id": _paper_id_property(),
@@ -1204,12 +1204,12 @@ outline_tool = types.Tool(
 
 read_section_tool = types.Tool(
     name="read_paper_section",
-    annotations=ToolAnnotations(readOnlyHint=True),
+    annotations=ToolAnnotations(read_only_hint=True),
     description=(
         "Return one bounded markdown section by outline ID (or unique title). "
         "Does not include sibling or parent sections."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "paper_id": _paper_id_property(),
@@ -1227,13 +1227,13 @@ read_section_tool = types.Tool(
 
 search_text_tool = types.Tool(
     name="search_paper_text",
-    annotations=ToolAnnotations(readOnlyHint=True),
+    annotations=ToolAnnotations(read_only_hint=True),
     description=(
         "Search a downloaded paper for bounded matching passages with "
         "section/source offsets. Suppresses high-overlap near-duplicates and "
         "prefers section-diverse hits. Lightweight substring search; no Torch."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "paper_id": _paper_id_property(),

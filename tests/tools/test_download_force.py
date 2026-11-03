@@ -36,11 +36,11 @@ def _fake_path(storage):
 
 def test_download_tool_schema_includes_force():
     """download_paper exposes force and stays a closed schema."""
-    props = download_tool.inputSchema["properties"]
+    props = download_tool.input_schema["properties"]
     assert "force" in props
     assert props["force"]["type"] == "boolean"
-    assert download_tool.inputSchema.get("additionalProperties") is False
-    assert "paper_id" in download_tool.inputSchema["required"]
+    assert download_tool.input_schema.get("additionalProperties") is False
+    assert "paper_id" in download_tool.input_schema["required"]
 
 
 @pytest.mark.asyncio

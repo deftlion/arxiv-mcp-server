@@ -273,12 +273,12 @@ def _page_properties() -> dict[str, Any]:
 
 get_paper_latex_tool = types.Tool(
     name="get_paper_latex",
-    annotations=ToolAnnotations(readOnlyHint=False, openWorldHint=True),
+    annotations=ToolAnnotations(read_only_hint=False, open_world_hint=True),
     description=(
         "Download, safely process, cache, and return bounded original LaTeX source. "
         "Use section tools for targeted reading."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {"paper_id": _paper_id_property(), **_page_properties()},
         "required": ["paper_id"],
@@ -288,9 +288,9 @@ get_paper_latex_tool = types.Tool(
 
 list_paper_latex_sections_tool = types.Tool(
     name="list_paper_latex_sections",
-    annotations=ToolAnnotations(readOnlyHint=False, openWorldHint=True),
+    annotations=ToolAnnotations(read_only_hint=False, open_world_hint=True),
     description="Return a compact outline of headings from original LaTeX source.",
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "paper_id": _paper_id_property(),
@@ -313,9 +313,9 @@ list_paper_latex_sections_tool = types.Tool(
 
 get_paper_latex_section_tool = types.Tool(
     name="get_paper_latex_section",
-    annotations=ToolAnnotations(readOnlyHint=False, openWorldHint=True),
+    annotations=ToolAnnotations(read_only_hint=False, open_world_hint=True),
     description="Return one bounded LaTeX section by outline ID or title (whitespace/case normalized; macros expanded).",
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "paper_id": _paper_id_property(),

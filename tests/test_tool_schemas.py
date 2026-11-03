@@ -2,6 +2,8 @@
 
 import json
 
+from jsonschema.validators import validator_for
+
 from arxiv_mcp_server.server import list_tools
 from arxiv_mcp_server.tools.search import search_tool
 
@@ -38,9 +40,9 @@ async def test_tool_input_schemas_are_closed():
 
     assert tools
     for tool in tools:
-        assert tool.inputSchema["type"] == "object"
+        assert tool.input_schema["type"] == "object"
         assert (
-            tool.inputSchema.get("additionalProperties") is False
+            tool.input_schema.get("additionalProperties") is False
         ), f"{tool.name} inputSchema must set additionalProperties=False"
 
 
@@ -53,7 +55,9 @@ async def test_list_tools_metadata_is_valid_mcp():
     for tool in tools:
         assert isinstance(tool.name, str) and tool.name
         assert isinstance(tool.description, str) and tool.description.strip()
-        schema = tool.inputSchema
+        schema = tool.input_schema
+        # Dispatch builds validators without re-checking schemas on each call.
+        validator_for(schema).check_schema(schema)
         assert schema["type"] == "object"
         assert schema.get("additionalProperties") is False
         properties = schema.get("properties", {})
@@ -76,7 +80,7 @@ async def test_list_tools_metadata_is_valid_mcp():
 
 def test_search_papers_schema_semantics_preserved():
     """Required params, enums, and invocation-critical guidance stay intact."""
-    schema = search_tool.inputSchema
+    schema = search_tool.input_schema
     props = schema["properties"]
 
     assert schema["required"] == ["query"]

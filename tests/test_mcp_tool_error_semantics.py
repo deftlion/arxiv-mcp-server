@@ -27,14 +27,12 @@ async def test_get_abstract_not_found_sets_mcp_is_error(mocker):
         AsyncMock(return_value=MockResponse(NO_ENTRIES_XML)),
     )
 
-    handler = server_module.server.request_handlers[types.CallToolRequest]
-    result = await handler(
-        types.CallToolRequest(
-            params=types.CallToolRequestParams(
-                name="get_abstract", arguments={"paper_id": "0000.00000"}
-            )
-        )
+    result = await server_module._call_tool(
+        None,
+        types.CallToolRequestParams(
+            name="get_abstract", arguments={"paper_id": "0000.00000"}
+        ),
     )
 
-    assert result.root.isError is True
-    assert "Paper 0000.00000 not found on arXiv" in result.root.content[0].text
+    assert result.is_error is True
+    assert "Paper 0000.00000 not found on arXiv" in result.content[0].text

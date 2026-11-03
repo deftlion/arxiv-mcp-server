@@ -33,17 +33,15 @@ async def test_mcp_read_paper_default_response_is_size_bounded(
     assert len(content) > DEFAULT_MAX_CHARS
     Path(temp_storage_path, f"{paper_id}.md").write_text(content, encoding="utf-8")
 
-    handler = server_module.server.request_handlers[types.CallToolRequest]
-    result = await handler(
-        types.CallToolRequest(
-            params=types.CallToolRequestParams(
-                name="read_paper", arguments={"paper_id": paper_id}
-            )
-        )
+    result = await server_module._call_tool(
+        None,
+        types.CallToolRequestParams(
+            name="read_paper", arguments={"paper_id": paper_id}
+        ),
     )
 
-    assert result.root.isError is False
-    raw = result.root.content[0].text
+    assert result.is_error is False
+    raw = result.content[0].text
     payload = json.loads(raw)
 
     assert payload["status"] == "success"
@@ -71,7 +69,7 @@ def test_download_and_read_tool_schemas_document_bounded_default():
         assert "12,000" in tool.description or "12000" in tool.description
         assert "return_full_text" in tool.description
         assert "next_start" in tool.description
-        props = tool.inputSchema["properties"]
+        props = tool.input_schema["properties"]
         assert "return_full_text" in props
         assert props["return_full_text"]["type"] == "boolean"
         assert "12,000" in props["max_chars"]["description"]

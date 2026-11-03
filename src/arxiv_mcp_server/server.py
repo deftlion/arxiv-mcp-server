@@ -11,8 +11,10 @@ from typing import Any, Dict, List
 
 import mcp.types as types
 import uvicorn
-from mcp.server import NotificationOptions, Server
-from mcp.server.models import InitializationOptions
+from jsonschema.exceptions import best_match
+from jsonschema.validators import validator_for
+from mcp import MCPError
+from mcp.server import Server, ServerRequestContext
 from mcp.server.stdio import stdio_server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from mcp.server.transport_security import TransportSecuritySettings
@@ -65,47 +67,37 @@ from .tools.download import shutdown_background_tasks
 settings = Settings()
 logger = logging.getLogger("arxiv-mcp-server")
 logger.setLevel(logging.INFO)
-server = Server(settings.APP_NAME)
 
 
-@server.list_prompts()
-async def list_prompts() -> List[types.Prompt]:
-    """List available prompts."""
-    return await handler_list_prompts()
+TOOLS: List[types.Tool] = [
+    search_tool,
+    download_tool,
+    list_tool,
+    read_tool,
+    abstract_tool,
+    semantic_search_tool,
+    reindex_tool,
+    citation_graph_tool,
+    export_citations_tool,
+    watch_topic_tool,
+    check_alerts_tool,
+    list_watches_tool,
+    unwatch_topic_tool,
+    get_paper_latex_tool,
+    list_paper_latex_sections_tool,
+    get_paper_latex_section_tool,
+    outline_tool,
+    read_section_tool,
+    search_text_tool,
+]
+_TOOL_VALIDATORS = {
+    tool.name: validator_for(tool.input_schema)(tool.input_schema) for tool in TOOLS
+}
 
 
-@server.get_prompt()
-async def get_prompt(
-    name: str, arguments: Dict[str, str] | None = None
-) -> types.GetPromptResult:
-    """Get a specific prompt with arguments."""
-    return await handler_get_prompt(name, arguments)
-
-
-@server.list_tools()
 async def list_tools() -> List[types.Tool]:
     """List available arXiv research tools."""
-    return [
-        search_tool,
-        download_tool,
-        list_tool,
-        read_tool,
-        abstract_tool,
-        semantic_search_tool,
-        reindex_tool,
-        citation_graph_tool,
-        export_citations_tool,
-        watch_topic_tool,
-        check_alerts_tool,
-        list_watches_tool,
-        unwatch_topic_tool,
-        get_paper_latex_tool,
-        list_paper_latex_sections_tool,
-        get_paper_latex_section_tool,
-        outline_tool,
-        read_section_tool,
-        search_text_tool,
-    ]
+    return list(TOOLS)
 
 
 def _tool_error_message(result: List[types.TextContent]) -> str | None:
@@ -124,7 +116,6 @@ def _tool_error_message(result: List[types.TextContent]) -> str | None:
     return None
 
 
-@server.call_tool()
 async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.TextContent]:
     """Handle tool calls for arXiv research functionality."""
     logger.debug(f"Calling tool {name} with arguments {arguments}")
@@ -180,16 +171,54 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.TextCont
         raise
 
 
-def _initialization_options() -> InitializationOptions:
-    """Build shared MCP initialization options for every transport."""
-    return InitializationOptions(
-        server_name=settings.APP_NAME,
-        server_version=settings.APP_VERSION,
-        capabilities=server.get_capabilities(
-            notification_options=NotificationOptions(resources_changed=True),
-            experimental_capabilities={},
-        ),
+async def _list_prompts(
+    ctx: ServerRequestContext, params: types.PaginatedRequestParams | None
+) -> types.ListPromptsResult:
+    return types.ListPromptsResult(prompts=await handler_list_prompts())
+
+
+async def _get_prompt(
+    ctx: ServerRequestContext, params: types.GetPromptRequestParams
+) -> types.GetPromptResult:
+    try:
+        return await handler_get_prompt(params.name, params.arguments)
+    except ValueError as exc:
+        raise MCPError(code=types.INVALID_PARAMS, message=str(exc)) from exc
+
+
+async def _list_tools(
+    ctx: ServerRequestContext, params: types.PaginatedRequestParams | None
+) -> types.ListToolsResult:
+    return types.ListToolsResult(tools=await list_tools())
+
+
+async def _call_tool(
+    ctx: ServerRequestContext, params: types.CallToolRequestParams
+) -> types.CallToolResult:
+    # SDK 2 no longer validates arguments or converts tool exceptions to results.
+    arguments = params.arguments or {}
+    try:
+        validator = _TOOL_VALIDATORS.get(params.name)
+        if validator and (error := best_match(validator.iter_errors(arguments))):
+            message = f"Input validation error: {error.message}"
+        else:
+            # Unknown tool names fall through to call_tool's error branch.
+            return types.CallToolResult(content=await call_tool(params.name, arguments))
+    except Exception as exc:
+        message = str(exc) or type(exc).__name__
+    return types.CallToolResult(
+        content=[types.TextContent(type="text", text=message)], is_error=True
     )
+
+
+server = Server(
+    settings.APP_NAME,
+    version=settings.APP_VERSION,
+    on_list_prompts=_list_prompts,
+    on_get_prompt=_get_prompt,
+    on_list_tools=_list_tools,
+    on_call_tool=_call_tool,
+)
 
 
 def _csv_settings(value: str) -> list[str]:
@@ -231,7 +260,7 @@ def _transport_security_settings() -> TransportSecuritySettings:
 async def _run_stdio() -> None:
     """Run the MCP server over stdio."""
     async with stdio_server() as streams:
-        await server.run(streams[0], streams[1], _initialization_options())
+        await server.run(streams[0], streams[1], server.create_initialization_options())
 
 
 async def _healthz(_request):

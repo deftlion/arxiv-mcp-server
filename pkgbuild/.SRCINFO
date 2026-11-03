@@ -1,0 +1,40 @@
+pkgbase = python-arxiv-mcp-server
+	pkgdesc = A flexible arXiv search and analysis service with MCP protocol support
+	pkgver = 0.8.2
+	pkgrel = 1
+	url = https://github.com/blazickjp/arxiv-mcp-server
+	arch = any
+	license = Apache-2.0
+	checkdepends = python-aioresponses>=0.7.6
+	checkdepends = python-pytest>=8.0.0
+	checkdepends = python-pytest-asyncio>=0.23.5
+	checkdepends = python-pytest-cov>=4.1.0
+	checkdepends = python-pytest-mock>=3.10.0
+	makedepends = python-build
+	makedepends = python-hatchling
+	makedepends = python-installer
+	makedepends = python-wheel
+	depends = python>=3.11
+	depends = python-aiofiles>=23.2.1
+	depends = python-aiohttp>=3.9.1
+	depends = python-anyio>=4.2.0
+	depends = python-arxiv>=2.1.0
+	depends = python-httpx>=0.24.0
+	depends = python-lxml>=4.6.0
+	depends = python-requests>=2.25.0
+	depends = python-jsonschema>=4.20.0
+	depends = python-mcp>=2.3.0
+	depends = python-mcp<3.0.0
+	depends = python-pydantic>=2.8.0
+	depends = python-pydantic-settings>=2.1.0
+	depends = python-dateutil>=2.8.2
+	depends = python-dotenv>=1.0.0
+	depends = python-sse-starlette>=1.8.2
+	depends = python-starlette>=0.27.0
+	depends = uvicorn>=0.30.0
+	optdepends = python-pymupdf4llm: PDF processing support
+	optdepends = python-pymupdf-layout: PDF layout analysis support
+	optdepends = python-numpy: pro semantic search support
+	optdepends = python-sentence-transformers: pro semantic search support
+
+pkgname = python-arxiv-mcp-server

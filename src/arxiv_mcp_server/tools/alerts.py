@@ -28,7 +28,7 @@ WATCH_FILE_NAME = "watched_topics.json"
 watch_topic_tool = types.Tool(
     name="watch_topic",
     annotations=ToolAnnotations(
-        readOnlyHint=False, destructiveHint=False, openWorldHint=False
+        read_only_hint=False, destructive_hint=False, open_world_hint=False
     ),
     description=(
         "Save or update a persistent research topic watch. "
@@ -41,7 +41,7 @@ watch_topic_tool = types.Tool(
         "On update, omit categories to preserve existing filters; pass categories: [] to clear them. "
         "Pair with check_alerts to poll for new papers."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "topic": {
@@ -77,7 +77,7 @@ watch_topic_tool = types.Tool(
 check_alerts_tool = types.Tool(
     name="check_alerts",
     annotations=ToolAnnotations(
-        readOnlyHint=False, idempotentHint=False, openWorldHint=True
+        read_only_hint=False, idempotent_hint=False, open_world_hint=True
     ),
     description=(
         "Check all saved topic watches for newly published papers since the last check. "
@@ -92,7 +92,7 @@ check_alerts_tool = types.Tool(
         "Returns a clear not-found error if a topic is provided but no matching watch exists. "
         "Returns a summary with new paper counts, has_more, and full paper metadata per topic."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "topic": {
@@ -110,14 +110,14 @@ check_alerts_tool = types.Tool(
 
 list_watches_tool = types.Tool(
     name="list_watches",
-    annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
     description=(
         "List all saved topic watches without checking for new papers. "
         "Returns each watch's topic, categories, last_checked timestamp, and other stored fields. "
         "Does not update last_checked — use this to inspect what is saved. "
         "Use unwatch_topic to remove a watch, or check_alerts to poll for new papers."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {},
         "additionalProperties": False,
@@ -127,7 +127,7 @@ list_watches_tool = types.Tool(
 unwatch_topic_tool = types.Tool(
     name="unwatch_topic",
     annotations=ToolAnnotations(
-        readOnlyHint=False, destructiveHint=True, openWorldHint=False
+        read_only_hint=False, destructive_hint=True, open_world_hint=False
     ),
     description=(
         "Delete a saved topic watch by exact topic string. "
@@ -135,7 +135,7 @@ unwatch_topic_tool = types.Tool(
         "Returns a clear not-found error if no matching watch exists. "
         "Use list_watches to inspect saved watches before deleting."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "topic": {

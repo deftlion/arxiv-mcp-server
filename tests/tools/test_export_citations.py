@@ -248,17 +248,15 @@ async def test_all_failed_batch_is_mcp_error_but_keeps_diagnostics(monkeypatch):
     from arxiv_mcp_server import server as server_module
 
     _stub_metadata(monkeypatch, [])
-    handler = server_module.server.request_handlers[types.CallToolRequest]
-    result = await handler(
-        types.CallToolRequest(
-            params=types.CallToolRequestParams(
-                name="export_citations", arguments={"paper_ids": ["2401.99999"]}
-            )
-        )
+    result = await server_module._call_tool(
+        None,
+        types.CallToolRequestParams(
+            name="export_citations", arguments={"paper_ids": ["2401.99999"]}
+        ),
     )
 
-    assert result.root.isError is True
-    payload = json.loads(result.root.content[0].text)
+    assert result.is_error is True
+    payload = json.loads(result.content[0].text)
     assert payload["status"] == "error"
     assert payload["count"] == {"requested": 1, "succeeded": 0, "failed": 1}
     assert payload["results"][0]["error"] == "not found on arXiv"
@@ -328,7 +326,7 @@ async def test_tool_registered_in_server():
 
     tools = {tool.name: tool for tool in await list_tools()}
     assert "export_citations" in tools
-    assert tools["export_citations"].inputSchema["additionalProperties"] is False
+    assert tools["export_citations"].input_schema["additionalProperties"] is False
 
 
 @pytest.mark.asyncio

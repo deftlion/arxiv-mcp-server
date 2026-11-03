@@ -27,7 +27,7 @@ METADATA_SUFFIX = ".meta.json"
 
 list_tool = types.Tool(
     name="list_papers",
-    annotations=ToolAnnotations(readOnlyHint=True),
+    annotations=ToolAnnotations(read_only_hint=True),
     description=(
         "List all papers that have been downloaded and stored locally via download_paper. "
         "Returns id, title, authors, published, and arxiv_version/versioned_id "
@@ -36,7 +36,7 @@ list_tool = types.Tool(
         "Returns an empty list if no papers have been downloaded yet. "
         "Workflow: search_papers -> download_paper -> list_papers -> read_paper."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "compact": {

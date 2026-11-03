@@ -50,3 +50,9 @@ htmlcov/
 .mcpregistry_github_token
 .mcpregistry_registry_token
 mcp-publisher
+
+# Local planning notes and Arch package build output
+.planning/
+pkgbuild/*.pkg.tar*
+pkgbuild/src/
+pkgbuild/pkg/

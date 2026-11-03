@@ -176,7 +176,7 @@ async def run_client(http_server, directory):
             print(f"\n✓ {MODE} case: elapsed {elapsed:.3f}s ≤ 7.5s, requests = 1")
 
             alive = await session.call_tool("list_papers", {"compact": True})
-            print("Server responsive afterward:", not alive.isError)
+            print("Server responsive afterward:", not alive.is_error)
 
 
 if __name__ == "__main__":

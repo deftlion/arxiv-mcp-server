@@ -530,7 +530,7 @@ def _parse_arxiv_atom_response(xml_text: str) -> List[Dict[str, Any]]:
 
 search_tool = types.Tool(
     name="search_papers",
-    annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True),
     description=(
         "Search arXiv by query with optional categories, date range, sort, and pagination.\n\n"
         "Query: prefer quoted phrases; ti:/au:/abs:/cat:; AND/OR/ANDNOT. "
@@ -545,7 +545,7 @@ search_tool = types.Tool(
         "arXiv ~3s between requests (server-side). Transient 429/503 are retried "
         "with backoff; persistent rate limits return status=rate_limited."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "query": {

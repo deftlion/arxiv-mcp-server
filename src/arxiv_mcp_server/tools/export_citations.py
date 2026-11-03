@@ -198,7 +198,7 @@ def _error(message: str) -> List[types.TextContent]:
 
 export_citations_tool = types.Tool(
     name="export_citations",
-    annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True),
     description=(
         "Export BibTeX citations for one or more arXiv papers using authoritative arXiv "
         "metadata (title, authors, year, primary category), never model-generated fields. "
@@ -206,7 +206,7 @@ export_citations_tool = types.Tool(
         "deterministic. Returns the rendered BibTeX plus per-paper status/error. "
         "BibTeX only; RIS/CSL-JSON are not yet supported."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "paper_ids": {

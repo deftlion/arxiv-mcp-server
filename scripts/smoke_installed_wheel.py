@@ -12,7 +12,6 @@ import subprocess
 import sys
 import tempfile
 import tomllib
-from datetime import timedelta
 from typing import Mapping
 
 from mcp import ClientSession, StdioServerParameters
@@ -126,10 +125,10 @@ async def exercise_mcp_server(
             async with ClientSession(
                 read_stream,
                 write_stream,
-                read_timeout_seconds=timedelta(seconds=MCP_REQUEST_TIMEOUT_SECONDS),
+                read_timeout_seconds=MCP_REQUEST_TIMEOUT_SECONDS,
             ) as session:
                 initialized = await session.initialize()
-                server_version = initialized.serverInfo.version
+                server_version = initialized.server_info.version
                 if server_version != expected_version:
                     raise RuntimeError(
                         f"MCP server version {server_version!r} does not match "
@@ -164,7 +163,7 @@ async def exercise_mcp_server(
                         raise RuntimeError(f"Prompt {prompt_name!r} returned no text")
 
                 local_result = await session.call_tool("list_papers", {})
-                if local_result.isError or not local_result.content:
+                if local_result.is_error or not local_result.content:
                     raise RuntimeError("list_papers failed through the MCP session")
 
     return {

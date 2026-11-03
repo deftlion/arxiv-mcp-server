@@ -45,7 +45,7 @@ class IndexedPaper:
 
 semantic_search_tool = types.Tool(
     name="semantic_search",
-    annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=False),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False),
     description=(
         "Semantic similarity search over papers you have already downloaded locally via download_paper. "
         "Supports free-text queries (e.g. 'attention mechanisms for long sequences') or finding papers "
@@ -56,7 +56,7 @@ semantic_search_tool = types.Tool(
         "Requires pro dependencies: uvx --from 'arxiv-mcp-server[pro]' arxiv-mcp-server "
         "(or uv tool install 'arxiv-mcp-server[pro]')."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "query": {
@@ -81,10 +81,10 @@ semantic_search_tool = types.Tool(
 reindex_tool = types.Tool(
     name="reindex",
     annotations=ToolAnnotations(
-        readOnlyHint=False, destructiveHint=False, openWorldHint=False
+        read_only_hint=False, destructive_hint=False, open_world_hint=False
     ),
     description="Rebuild the local semantic index for downloaded papers.",
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "clear_existing": {

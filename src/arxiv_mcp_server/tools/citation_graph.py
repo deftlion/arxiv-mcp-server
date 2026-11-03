@@ -55,7 +55,7 @@ CACHE_TTL_RATE_LIMITED_SECONDS = 5 * 60  # 5 minutes
 
 citation_graph_tool = types.Tool(
     name="citation_graph",
-    annotations=ToolAnnotations(readOnlyHint=True, openWorldHint=True),
+    annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True),
     description=(
         "Return papers citing an arXiv paper and papers that it references "
         "using Semantic Scholar's citation graph. Results are bounded "
@@ -65,7 +65,7 @@ citation_graph_tool = types.Tool(
         "makes this reliable; without a key, persistent rate limits return "
         "status=rate_limited with an unmistakable warning instead of failing hard."
     ),
-    inputSchema={
+    input_schema={
         "type": "object",
         "properties": {
             "paper_id": {
