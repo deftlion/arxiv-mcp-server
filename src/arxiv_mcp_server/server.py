@@ -7,13 +7,12 @@ This module implements an MCP server for interacting with arXiv.
 
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
-import mcp.types as types
 import uvicorn
 from jsonschema.exceptions import best_match
 from jsonschema.validators import validator_for
-from mcp import MCPError
+from mcp import MCPError, types
 from mcp.server import Server, ServerRequestContext
 from mcp.server.stdio import stdio_server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
@@ -21,47 +20,50 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
 from starlette.responses import PlainTextResponse
 from starlette.routing import Mount, Route
+
 from .config import Settings, close_arxiv_client
-from .tools import (
-    handle_search,
-    handle_download,
-    handle_list_papers,
-    handle_read_paper,
-    handle_get_abstract,
-)
-from .tools import search_tool, download_tool, list_tool, read_tool, abstract_tool
-from .tools import (
-    handle_semantic_search,
-    handle_reindex,
-    semantic_search_tool,
-    reindex_tool,
-    handle_citation_graph,
-    citation_graph_tool,
-    handle_export_citations,
-    export_citations_tool,
-    handle_watch_topic,
-    watch_topic_tool,
-    handle_check_alerts,
-    check_alerts_tool,
-    handle_list_watches,
-    list_watches_tool,
-    handle_unwatch_topic,
-    unwatch_topic_tool,
-    get_paper_latex_tool,
-    handle_get_paper_latex,
-    list_paper_latex_sections_tool,
-    handle_list_paper_latex_sections,
-    get_paper_latex_section_tool,
-    handle_get_paper_latex_section,
-    outline_tool,
-    handle_get_paper_outline,
-    read_section_tool,
-    handle_read_paper_section,
-    search_text_tool,
-    handle_search_paper_text,
-)
-from .prompts.handlers import list_prompts as handler_list_prompts
 from .prompts.handlers import get_prompt as handler_get_prompt
+from .prompts.handlers import list_prompts as handler_list_prompts
+from .tools import (
+    abstract_tool,
+    check_alerts_tool,
+    citation_graph_tool,
+    download_tool,
+    export_citations_tool,
+    get_paper_latex_section_tool,
+    get_paper_latex_tool,
+    handle_check_alerts,
+    handle_citation_graph,
+    handle_download,
+    handle_export_citations,
+    handle_get_abstract,
+    handle_get_paper_latex,
+    handle_get_paper_latex_section,
+    handle_get_paper_outline,
+    handle_list_paper_latex_sections,
+    handle_list_papers,
+    handle_list_watches,
+    handle_read_paper,
+    handle_read_paper_section,
+    handle_reindex,
+    handle_search,
+    handle_search_paper_text,
+    handle_semantic_search,
+    handle_unwatch_topic,
+    handle_watch_topic,
+    list_paper_latex_sections_tool,
+    list_tool,
+    list_watches_tool,
+    outline_tool,
+    read_section_tool,
+    read_tool,
+    reindex_tool,
+    search_text_tool,
+    search_tool,
+    semantic_search_tool,
+    unwatch_topic_tool,
+    watch_topic_tool,
+)
 from .tools.download import shutdown_background_tasks
 
 settings = Settings()
@@ -95,12 +97,12 @@ _TOOL_VALIDATORS = {
 }
 
 
-async def list_tools() -> List[types.Tool]:
+async def list_tools() -> list[types.Tool]:
     """List available arXiv research tools."""
     return list(TOOLS)
 
 
-def _tool_error_message(result: List[types.TextContent]) -> str | None:
+def _tool_error_message(result: list[types.TextContent]) -> str | None:
     """Return the error text if a tool result is an error payload."""
     if len(result) != 1 or result[0].type != "text":
         return None
@@ -116,7 +118,7 @@ def _tool_error_message(result: List[types.TextContent]) -> str | None:
     return None
 
 
-async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextContent]:
     """Handle tool calls for arXiv research functionality."""
     logger.debug(f"Calling tool {name} with arguments {arguments}")
     try:
@@ -167,7 +169,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.TextCont
             raise RuntimeError(error_message)
         return result
     except Exception as e:
-        logger.error(f"Tool error: {str(e)}")
+        logger.error(f"Tool error: {e!s}")
         raise
 
 
@@ -207,7 +209,7 @@ async def _call_tool(
                 content=list(await call_tool(params.name, arguments))
             )
     # Tool failures must reach clients as is_error results, not protocol errors.
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         message = str(exc) or type(exc).__name__
     return types.CallToolResult(
         content=[types.TextContent(type="text", text=message)], is_error=True

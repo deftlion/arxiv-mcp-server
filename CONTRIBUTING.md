@@ -32,14 +32,15 @@ The process waits for MCP messages on stdio; it does not print an interactive pr
 Run these checks before submitting a pull request:
 
 ```bash
-uv run black --check .
+uv run ruff check .
+uv run ruff format --check .
 uv run pytest
 ```
 
 To apply formatting locally:
 
 ```bash
-uv run black .
+uv run ruff format .
 ```
 
 New behavior should include tests. Bug fixes should include a regression test that fails before the fix and passes afterward.

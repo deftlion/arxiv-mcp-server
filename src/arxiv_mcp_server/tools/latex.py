@@ -3,23 +3,23 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 import json
 import logging
 import os
-from pathlib import Path
 import tempfile
 import threading
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import httpx
-import mcp.types as types
+from mcp import types
 from mcp.types import ToolAnnotations
 
 from ..arxiv_api import ARXIV_RATE_LIMITER
 from ..config import Settings
+from .arxiv_ids import parse_arxiv_id
 from .content import LATEX_CONTENT_WARNING, add_content_payload
-from .search import ArxivRateLimitError, _rate_limited_response
 from .latex_archive import (
     MAX_ARCHIVE_BYTES,
     MAX_ARCHIVE_MEMBERS,
@@ -32,12 +32,16 @@ from .latex_archive import (
     LatexSourceError,
     SourceArchiveLimitError,
     UnsafeSourceArchiveError,
-    _download_source_archive as _download_source_archive_impl,
-    _extract_tex_files as _extract_tex_files_impl,
     _main_file_score,
     _read_plain_gzip,
     _safe_member_candidate,
     _safe_member_name,
+)
+from .latex_archive import (
+    _download_source_archive as _download_source_archive_impl,
+)
+from .latex_archive import (
+    _extract_tex_files as _extract_tex_files_impl,
 )
 from .latex_flatten import (
     MAX_FLATTENED_CHARS,
@@ -49,13 +53,17 @@ from .latex_flatten import (
     _collect_macros,
     _extract_section,
     _find_section,
-    _flatten_source as _flatten_source_impl,
-    _flatten_source_with_unmatched as _flatten_source_with_unmatched_impl,
     _mask_tex_comments,
     _parse_sections,
     _resolve_include,
 )
-from .arxiv_ids import parse_arxiv_id
+from .latex_flatten import (
+    _flatten_source as _flatten_source_impl,
+)
+from .latex_flatten import (
+    _flatten_source_with_unmatched as _flatten_source_with_unmatched_impl,
+)
+from .search import ArxivRateLimitError, _rate_limited_response
 
 logger = logging.getLogger("arxiv-mcp-server")
 settings = Settings()
@@ -369,8 +377,8 @@ async def handle_get_paper_latex(
         # Handle rate limiting (406/429/503)
         if status in (406, 429, 503):
             from .search import (
-                _HTTP_406_RETRY_AFTER_SECONDS,
                 _DEFAULT_RETRY_AFTER_SECONDS,
+                _HTTP_406_RETRY_AFTER_SECONDS,
             )
 
             # Parse Retry-After header
@@ -408,7 +416,7 @@ async def handle_get_paper_latex(
         return _error(message, paper_id)
     except LatexSourceError as exc:
         return _error(str(exc), paper_id)
-    except Exception as exc:
+    except Exception:
         logger.exception("LaTeX source retrieval failed for %s", paper_id)
         return _error("LaTeX source retrieval failed", paper_id)
 
@@ -457,8 +465,8 @@ async def handle_list_paper_latex_sections(
         # Handle rate limiting (406/429/503)
         if status in (406, 429, 503):
             from .search import (
-                _HTTP_406_RETRY_AFTER_SECONDS,
                 _DEFAULT_RETRY_AFTER_SECONDS,
+                _HTTP_406_RETRY_AFTER_SECONDS,
             )
 
             # Parse Retry-After header
@@ -494,7 +502,7 @@ async def handle_list_paper_latex_sections(
         )
     except LatexSourceError as exc:
         return _error(str(exc), paper_id)
-    except Exception as exc:
+    except Exception:
         logger.exception("LaTeX outline retrieval failed for %s", paper_id)
         return _error("LaTeX outline retrieval failed", paper_id)
 
@@ -542,8 +550,8 @@ async def handle_get_paper_latex_section(
         # Handle rate limiting (406/429/503)
         if status in (406, 429, 503):
             from .search import (
-                _HTTP_406_RETRY_AFTER_SECONDS,
                 _DEFAULT_RETRY_AFTER_SECONDS,
+                _HTTP_406_RETRY_AFTER_SECONDS,
             )
 
             # Parse Retry-After header
@@ -579,6 +587,6 @@ async def handle_get_paper_latex_section(
         )
     except LatexSourceError as exc:
         return _error(str(exc), paper_id)
-    except Exception as exc:
+    except Exception:
         logger.exception("LaTeX section retrieval failed for %s", paper_id)
         return _error("LaTeX section retrieval failed", paper_id)

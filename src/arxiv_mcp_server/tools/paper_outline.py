@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import mcp.types as types
+from mcp import types
 from mcp.types import ToolAnnotations
 
 from ..config import Settings
@@ -25,7 +25,7 @@ from .arxiv_ids import (
     normalize_arxiv_id,
     parse_arxiv_id,
 )
-from .content import add_content_payload, CONTENT_WARNING
+from .content import CONTENT_WARNING, add_content_payload
 from .list_papers import _sidecar_arxiv_version, resolve_stored_stem
 
 settings = Settings()
@@ -328,9 +328,7 @@ def _title_looks_like_heading(
         return False
     # Headings are Title Case noun phrases; body lists are sentence case.
     # For split numbers (e.g. "2.2\nKAN architecture"), allow sentence case.
-    if not allow_sentence_case and not _is_title_case_phrase(normalized):
-        return False
-    return True
+    return not (not allow_sentence_case and not _is_title_case_phrase(normalized))
 
 
 def _numbered_heading(
@@ -421,8 +419,7 @@ def _match_heading_line(line: str) -> tuple[int, str] | None:
         # Exact known title only — no extra tokens (tightens bare heuristics).
         if candidate.casefold() in _BARE_SECTION_TITLES:
             remainder = stripped
-            if remainder.endswith("."):
-                remainder = remainder[:-1]
+            remainder = remainder.removesuffix(".")
             if remainder.strip().casefold() == candidate.casefold():
                 # Reject lowercase "reference"/"references" - only capitalized versions
                 # are valid section headings (regression blocker: DeepSeek-R1 2501.12948)
@@ -440,9 +437,8 @@ def _match_heading_line(line: str) -> tuple[int, str] | None:
 
 
 def _logical_line(line: str) -> str:
-    logical = line[:-1] if line.endswith("\n") else line
-    if logical.endswith("\r"):
-        logical = logical[:-1]
+    logical = line.removesuffix("\n")
+    logical = logical.removesuffix("\r")
     return logical
 
 
@@ -583,7 +579,7 @@ def _is_bare_section_title_line(line: str) -> bool:
     candidate = _normalize_heading_title(stripped)
     if candidate.casefold() not in _BARE_SECTION_TITLES:
         return False
-    remainder = stripped[:-1] if stripped.endswith(".") else stripped
+    remainder = stripped.removesuffix(".")
     return remainder.strip().casefold() == candidate.casefold()
 
 
@@ -744,9 +740,7 @@ def _bare_title_has_section_body(
             return True
         # Identifier-like neighbor (Model / Method / HellaS) ⇒ table chrome.
         # Sentence fragments like ``Body.`` keep the bare title.
-        if re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", stripped):
-            return False
-        return True
+        return not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", stripped)
     return True
 
 

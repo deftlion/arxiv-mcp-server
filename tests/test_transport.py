@@ -3,7 +3,6 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from mcp.server.transport_security import TransportSecurityMiddleware
 
 from arxiv_mcp_server import server as server_module

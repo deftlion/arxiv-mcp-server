@@ -1,9 +1,9 @@
 """Unit tests for prompt handlers."""
 
 import pytest
-from typing import Dict
-from arxiv_mcp_server.prompts.handlers import list_prompts, get_prompt
 from mcp.types import GetPromptResult, PromptMessage, TextContent
+
+from arxiv_mcp_server.prompts.handlers import get_prompt, list_prompts
 
 
 @pytest.mark.asyncio

@@ -41,9 +41,9 @@ async def test_tool_input_schemas_are_closed():
     assert tools
     for tool in tools:
         assert tool.input_schema["type"] == "object"
-        assert (
-            tool.input_schema.get("additionalProperties") is False
-        ), f"{tool.name} inputSchema must set additionalProperties=False"
+        assert tool.input_schema.get("additionalProperties") is False, (
+            f"{tool.name} inputSchema must set additionalProperties=False"
+        )
 
 
 async def test_list_tools_metadata_is_valid_mcp():

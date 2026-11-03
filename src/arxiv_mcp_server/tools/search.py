@@ -2,21 +2,22 @@
 
 import json
 import logging
-import httpx
-import asyncio
 import xml.etree.ElementTree as ET
+from datetime import datetime
+from typing import Any
 from urllib.parse import quote
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timezone
+
+import httpx
 from dateutil import parser
-import mcp.types as types
+from mcp import types
 from mcp.types import ToolAnnotations
-from ..config import Settings
+
 from ..arxiv_api import (
     ARXIV_RATE_LIMITER,
     ArxivRateLimitError,
     retry_with_backoff,
 )
+from ..config import Settings
 from .content import CONTENT_WARNING
 
 logger = logging.getLogger("arxiv-mcp-server")
@@ -44,20 +45,20 @@ _DEFAULT_RETRY_AFTER_SECONDS = 60.0
 _HTTP_406_MAX_RETRIES = 1
 
 RATE_LIMIT_MESSAGE = (
-    "arXiv is rate limiting this IP (HTTP 429). " "Please wait before retrying."
+    "arXiv is rate limiting this IP (HTTP 429). Please wait before retrying."
 )
 
 
 def _status_response(
     status: str, message: str, **extra: Any
-) -> List[types.TextContent]:
+) -> list[types.TextContent]:
     """Return a structured {status, message} tool payload."""
-    payload: Dict[str, Any] = {"status": status, "message": message}
+    payload: dict[str, Any] = {"status": status, "message": message}
     payload.update(extra)
     return [types.TextContent(type="text", text=json.dumps(payload, indent=2))]
 
 
-def _error_response(message: str) -> List[types.TextContent]:
+def _error_response(message: str) -> list[types.TextContent]:
     """Structured error payload used by search_papers failure paths."""
     return _status_response("error", message)
 
@@ -67,9 +68,9 @@ def _rate_limited_response(
     *,
     retry_after_seconds: float | None = None,
     status_code: int = 429,
-) -> List[types.TextContent]:
+) -> list[types.TextContent]:
     """Soft rate-limit result so callers can continue without a bare Error: stall."""
-    extra: Dict[str, Any] = {"http_status": status_code}
+    extra: dict[str, Any] = {"http_status": status_code}
     if retry_after_seconds is None:
         retry_after_seconds = _DEFAULT_RETRY_AFTER_SECONDS
     extra["retry_after_seconds"] = retry_after_seconds
@@ -180,9 +181,7 @@ def _scope_user_query(query: str) -> str:
     return f"(ti:({query}) OR abs:({query}))"
 
 
-def _format_submitted_date_filter(
-    date_from: Optional[str], date_to: Optional[str]
-) -> str:
+def _format_submitted_date_filter(date_from: str | None, date_to: str | None) -> str:
     """Build an arXiv submittedDate range using spaces around TO."""
     try:
         if date_from:
@@ -206,9 +205,9 @@ def _format_submitted_date_filter(
 
 def build_arxiv_search_query(
     query: str,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-    categories: Optional[List[str]] = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    categories: list[str] | None = None,
 ) -> str:
     """Return the unencoded arXiv search_query string."""
     query_parts: list[str] = []
@@ -235,9 +234,9 @@ def build_arxiv_search_url(
     query: str,
     max_results: int = DEFAULT_MAX_RESULTS,
     sort_by: str = "relevance",
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-    categories: Optional[List[str]] = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    categories: list[str] | None = None,
     start: int = 0,
     sort_order: str = "descending",
 ) -> str:
@@ -270,12 +269,12 @@ async def _raw_arxiv_search(
     query: str,
     max_results: int = DEFAULT_MAX_RESULTS,
     sort_by: str = "relevance",
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-    categories: Optional[List[str]] = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    categories: list[str] | None = None,
     start: int = 0,
     sort_order: str = "descending",
-) -> tuple[List[Dict[str, Any]], Optional[int]]:
+) -> tuple[list[dict[str, Any]], int | None]:
     """
     Perform arXiv search using raw HTTP requests.
 
@@ -312,7 +311,7 @@ async def _raw_arxiv_search(
     return papers, _parse_opensearch_total_results(response.text)
 
 
-def _parse_opensearch_total_results(xml_text: str) -> Optional[int]:
+def _parse_opensearch_total_results(xml_text: str) -> int | None:
     """Return arXiv OpenSearch totalResults, or None if the feed omits it."""
     try:
         root = ET.fromstring(xml_text)
@@ -380,11 +379,11 @@ def _snippet_abstract(abstract: str, max_chars: int = ABSTRACT_SNIPPET_CHARS) ->
 
 
 def _apply_abstract_mode(
-    papers: List[Dict[str, Any]], abstract_mode: str
-) -> List[Dict[str, Any]]:
+    papers: list[dict[str, Any]], abstract_mode: str
+) -> list[dict[str, Any]]:
     """Project paper dicts according to abstract_mode without mutating inputs."""
     mode = _normalize_abstract_mode(abstract_mode)
-    projected: List[Dict[str, Any]] = []
+    projected: list[dict[str, Any]] = []
     for paper in papers:
         item = dict(paper)
         if mode == "none":
@@ -399,13 +398,13 @@ def _apply_abstract_mode(
 
 
 def _build_search_response(
-    papers: List[Dict[str, Any]],
+    papers: list[dict[str, Any]],
     *,
-    total_results: Optional[int] = None,
-    has_more: Optional[bool] = None,
+    total_results: int | None = None,
+    has_more: bool | None = None,
     start: int = 0,
     abstract_mode: str = DEFAULT_ABSTRACT_MODE,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Assemble search JSON. Never report page size as total_results.
 
     Pagination mirrors read_paper / content helpers: ``start`` is the
@@ -416,7 +415,7 @@ def _build_search_response(
     returned = len(papers)
     start = max(0, int(start))
     mode = _normalize_abstract_mode(abstract_mode)
-    response: Dict[str, Any] = {
+    response: dict[str, Any] = {
         "returned": returned,
         "start": start,
         "abstract_mode": mode,
@@ -438,7 +437,7 @@ def _build_search_response(
     return response
 
 
-def _parse_arxiv_atom_response(xml_text: str) -> List[Dict[str, Any]]:
+def _parse_arxiv_atom_response(xml_text: str) -> list[dict[str, Any]]:
     """Parse arXiv Atom XML response into paper dictionaries."""
     results = []
 
@@ -605,7 +604,7 @@ search_tool = types.Tool(
 )
 
 
-def _validate_categories(categories: List[str]) -> bool:
+def _validate_categories(categories: list[str]) -> bool:
     """Validate that all provided categories are valid arXiv categories."""
     for category in categories:
         if "." in category:
@@ -645,7 +644,7 @@ def _optimize_query(query: str) -> str:
     return query
 
 
-async def handle_search(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_search(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Handle paper search requests via the arXiv Atom API.
 
     Always uses raw HTTP so OpenSearch ``totalResults`` (corpus hit count)

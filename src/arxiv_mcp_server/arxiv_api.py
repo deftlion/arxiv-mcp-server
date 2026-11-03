@@ -3,12 +3,13 @@
 import asyncio
 import logging
 import os
-from pathlib import Path
 import random
 import tempfile
 import threading
 import time
-from typing import Awaitable, Callable, Protocol, TypeVar
+from collections.abc import Awaitable, Callable
+from pathlib import Path
+from typing import Protocol, TypeVar
 
 import httpx
 
@@ -18,8 +19,6 @@ T = TypeVar("T")
 
 class GateTimeout(Exception):
     """Raised when acquiring the rate limiter gate times out."""
-
-    pass
 
 
 class ArxivRateLimiter:
@@ -106,19 +105,13 @@ ARXIV_RATE_LIMITER = ArxivRateLimiter()
 class RetryableError(Exception):
     """Base class for errors that should trigger a retry."""
 
-    pass
-
 
 class ArxivTimeoutError(RetryableError):
     """Raised when an arXiv request times out."""
 
-    pass
-
 
 class ArxivConnectionError(RetryableError):
     """Raised when a connection to arXiv fails."""
-
-    pass
 
 
 class ArxivRateLimitError(RetryableError):
@@ -152,11 +145,11 @@ def _parse_retry_after_seconds(retry_after: str | None) -> float | None:
 
     # Try as HTTP-date (RFC 7231)
     try:
-        from email.utils import parsedate_to_datetime
         import datetime
+        from email.utils import parsedate_to_datetime
 
         retry_dt = parsedate_to_datetime(retry_after)
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         delta = (retry_dt - now).total_seconds()
         return max(0.0, delta)  # Don't return negative
     except Exception:
@@ -272,7 +265,7 @@ async def retry_with_backoff(
             if max_total_time is not None:
                 remaining = max_total_time - (time.monotonic() - start_time)
                 if remaining <= 0:
-                    raise asyncio.TimeoutError("Budget exhausted before attempt")
+                    raise TimeoutError("Budget exhausted before attempt")
                 logger.debug(
                     "%s attempt %d with %.1fs budget",
                     operation_name,
@@ -282,7 +275,7 @@ async def retry_with_backoff(
                 return await asyncio.wait_for(operation(), timeout=remaining)
 
             return await operation()
-        except asyncio.TimeoutError as e:
+        except TimeoutError as e:
             # Raised by wait_for when budget expires during an operation
             if max_total_time is not None:
                 elapsed = time.monotonic() - start_time
@@ -584,15 +577,13 @@ def stream_pdf_to_path(
                             output.write(chunk)
 
     try:
-        last_exception: Exception | None = None
-
         for attempt in range(settings.ARXIV_MAX_RETRIES + 1):
             # Check remaining budget before attempt
             remaining = remaining_time()
             if remaining <= 0.1:
                 staging.unlink(missing_ok=True)
                 raise ArxivTimeoutError(
-                    f"PDF download budget exhausted. Please retry shortly."
+                    "PDF download budget exhausted. Please retry shortly."
                 )
 
             try:
@@ -602,14 +593,13 @@ def stream_pdf_to_path(
                     # Not enough time for a meaningful attempt
                     staging.unlink(missing_ok=True)
                     raise ArxivTimeoutError(
-                        f"PDF download timed out (insufficient budget for retry). "
-                        f"Please retry shortly."
+                        "PDF download timed out (insufficient budget for retry). "
+                        "Please retry shortly."
                     )
                 sync_download(attempt_timeout)
                 staging.replace(destination)
                 return
             except httpx.TimeoutException as e:
-                last_exception = e
                 if attempt < settings.ARXIV_MAX_RETRIES:
                     wait = min(
                         settings.ARXIV_INITIAL_BACKOFF
@@ -622,8 +612,8 @@ def stream_pdf_to_path(
                     if wait >= remaining:
                         staging.unlink(missing_ok=True)
                         raise ArxivTimeoutError(
-                            f"PDF download timed out (insufficient budget for retry). "
-                            f"Please retry shortly."
+                            "PDF download timed out (insufficient budget for retry). "
+                            "Please retry shortly."
                         ) from e
                     wait = min(wait, remaining * 0.9)
 
@@ -641,7 +631,6 @@ def stream_pdf_to_path(
                         f"The arXiv PDF server may be slow or overloaded. Please retry shortly."
                     ) from e
             except (httpx.ConnectError, httpx.ConnectTimeout) as e:
-                last_exception = e
                 if attempt < settings.ARXIV_MAX_RETRIES:
                     wait = min(
                         settings.ARXIV_INITIAL_BACKOFF
@@ -654,7 +643,7 @@ def stream_pdf_to_path(
                     if wait >= remaining:
                         staging.unlink(missing_ok=True)
                         raise ArxivTimeoutError(
-                            f"Could not connect to arXiv for PDF download (insufficient budget for retry)"
+                            "Could not connect to arXiv for PDF download (insufficient budget for retry)"
                         ) from e
                     wait = min(wait, remaining * 0.9)
 
@@ -673,7 +662,6 @@ def stream_pdf_to_path(
             except httpx.HTTPStatusError as e:
                 if e.response is not None and e.response.status_code in (406, 429, 503):
                     # 406 is IP-level burst throttling, retry minimally (#277)
-                    last_exception = e
                     max_retries_for_status = (
                         settings.ARXIV_HTTP_406_MAX_RETRIES
                         if e.response.status_code == 406

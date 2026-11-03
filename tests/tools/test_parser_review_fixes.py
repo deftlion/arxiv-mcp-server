@@ -1,6 +1,5 @@
 """Tests for parser regression fixes from PR #285 review."""
 
-import pytest
 from arxiv_mcp_server.tools.paper_outline import parse_markdown_sections
 
 

@@ -12,18 +12,19 @@ Use the locked uv environment:
 
 ```bash
 uv sync --extra test --extra dev
-uv run black --check .
+uv run ruff check .
+uv run ruff format --check .
 uv run pytest
 ```
 
-Also run `ruff check <files>`, `ruff format --check <files>`, and `pyright <files>` on changed Python files. CI enforces only `black --check`, so black wins where `ruff format` disagrees. Existing code has unfixed ruff and pyright errors, so hold only changed lines to a clean result.
+Also run `pyright <files>` on changed Python files. Existing code has unfixed pyright errors, so hold only changed lines to a clean result.
 
 Use `fd` instead of `find` and `rg` instead of `grep` for searches.
 
 Apply formatting with:
 
 ```bash
-uv run black .
+uv run ruff format .
 ```
 
 Run a targeted test with:

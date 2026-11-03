@@ -5,9 +5,9 @@ from __future__ import annotations
 import gzip
 import io
 import logging
-from pathlib import PurePosixPath
 import posixpath
 import tarfile
+from pathlib import PurePosixPath
 
 import httpx
 
@@ -63,38 +63,40 @@ def _download_source_archive(paper_id: str) -> bytes:
             )
         }
         url = f"https://arxiv.org/e-print/{paper_id}"
-        with httpx.Client(
-            timeout=timeout, follow_redirects=True, headers=headers
-        ) as client:
-            with client.stream("GET", url) as response:
-                response.raise_for_status()
-                declared = response.headers.get("content-length")
-                if declared:
-                    try:
-                        if int(declared) > MAX_ARCHIVE_BYTES:
-                            raise SourceArchiveLimitError(
-                                "LaTeX source compressed archive exceeds safety limit"
-                            )
-                    except ValueError:
-                        pass
-                chunks: list[bytes] = []
-                received = 0
-                # Use iter_raw() with NO chunk_size to get each transport read immediately
-                # This avoids ByteChunker buffering and allows deadline check on every read
-                for chunk in response.iter_raw():
-                    # Check wall-clock deadline before processing each chunk
-                    remaining = deadline - time.monotonic()
-                    if remaining <= 0:
-                        raise LatexSourceError(
-                            f"LaTeX source download exceeded deadline (trickling response)"
+        with (
+            httpx.Client(
+                timeout=timeout, follow_redirects=True, headers=headers
+            ) as client,
+            client.stream("GET", url) as response,
+        ):
+            response.raise_for_status()
+            declared = response.headers.get("content-length")
+            if declared:
+                try:
+                    if int(declared) > MAX_ARCHIVE_BYTES:
+                        raise SourceArchiveLimitError(
+                            "LaTeX source compressed archive exceeds safety limit"
                         )
-                    if chunk:  # iter_raw can return empty chunks
-                        received += len(chunk)
-                        if received > MAX_ARCHIVE_BYTES:
-                            raise SourceArchiveLimitError(
-                                "LaTeX source compressed archive exceeds safety limit"
-                            )
-                        chunks.append(chunk)
+                except ValueError:
+                    pass
+            chunks: list[bytes] = []
+            received = 0
+            # Use iter_raw() with NO chunk_size to get each transport read immediately
+            # This avoids ByteChunker buffering and allows deadline check on every read
+            for chunk in response.iter_raw():
+                # Check wall-clock deadline before processing each chunk
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise LatexSourceError(
+                        "LaTeX source download exceeded deadline (trickling response)"
+                    )
+                if chunk:  # iter_raw can return empty chunks
+                    received += len(chunk)
+                    if received > MAX_ARCHIVE_BYTES:
+                        raise SourceArchiveLimitError(
+                            "LaTeX source compressed archive exceeds safety limit"
+                        )
+                    chunks.append(chunk)
         return b"".join(chunks)
 
     for attempt in range(settings.ARXIV_MAX_RETRIES + 1):
@@ -123,7 +125,7 @@ def _download_source_archive(paper_id: str) -> bytes:
                 )
             # Rate limiter only holds lock for this attempt
             return ARXIV_RATE_LIMITER.run_sync(
-                lambda: single_attempt(attempt_timeout, deadline)
+                lambda: single_attempt(attempt_timeout, deadline)  # noqa: B023
             )
         except httpx.TimeoutException as e:
             last_exception = e
@@ -138,7 +140,7 @@ def _download_source_archive(paper_id: str) -> bytes:
                 remaining = max_total_time - (time.monotonic() - start_time)
                 if wait >= remaining or remaining <= 0.1:
                     raise LatexSourceError(
-                        f"LaTeX source download timed out (insufficient budget for retry)"
+                        "LaTeX source download timed out (insufficient budget for retry)"
                     ) from e
                 wait = min(wait, remaining * 0.9)
                 logger.warning(
@@ -165,7 +167,7 @@ def _download_source_archive(paper_id: str) -> bytes:
                 remaining = max_total_time - (time.monotonic() - start_time)
                 if wait >= remaining or remaining <= 0.1:
                     raise LatexSourceError(
-                        f"Could not connect to arXiv for LaTeX source (insufficient budget for retry)"
+                        "Could not connect to arXiv for LaTeX source (insufficient budget for retry)"
                     ) from e
                 wait = min(wait, remaining * 0.9)
                 logger.warning(
@@ -244,7 +246,7 @@ def _extract_tex_files(data: bytes) -> dict[str, str]:
     total_uncompressed = 0
     total_tex = 0
     try:
-        archive = tarfile.open(fileobj=io.BytesIO(data), mode="r|*")
+        archive = tarfile.open(fileobj=io.BytesIO(data), mode="r|*")  # noqa: SIM115
     except tarfile.ReadError:
         return _read_plain_gzip(data)
 

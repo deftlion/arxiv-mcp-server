@@ -3,9 +3,9 @@
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-import mcp.types as types
+from mcp import types
 from mcp.types import ToolAnnotations
 
 from ..config import Settings
@@ -53,7 +53,7 @@ list_tool = types.Tool(
 )
 
 
-def _raw_stored_stems(storage_path: Optional[Path] = None) -> list[str]:
+def _raw_stored_stems(storage_path: Path | None = None) -> list[str]:
     """Return every on-disk ``.md`` stem that looks like an arXiv ID.
 
     Filenames use a flat stem (legacy ``/`` stored as ``__``); returned values
@@ -74,15 +74,15 @@ def _raw_stored_stems(storage_path: Optional[Path] = None) -> list[str]:
 
 def _stems_for_bare_id(
     bare_id: str,
-    stems: Optional[List[str]] = None,
-    storage_path: Optional[Path] = None,
+    stems: list[str] | None = None,
+    storage_path: Path | None = None,
 ) -> list[str]:
     """Return stored stems that share *bare_id* (including the bare stem)."""
     pool = stems if stems is not None else _raw_stored_stems(storage_path)
     return [stem for stem in pool if bare_arxiv_id(stem) == bare_id]
 
 
-def preferred_stored_stem(candidates: List[str]) -> Optional[str]:
+def preferred_stored_stem(candidates: list[str]) -> str | None:
     """Pick the canonical on-disk stem for one paper.
 
     Prefer the bare-ID file (new storage model). Otherwise keep the highest
@@ -96,9 +96,7 @@ def preferred_stored_stem(candidates: List[str]) -> Optional[str]:
     return max(candidates, key=arxiv_version_number)
 
 
-def _sidecar_arxiv_version(
-    stem: str, storage_path: Optional[Path] = None
-) -> Optional[str]:
+def _sidecar_arxiv_version(stem: str, storage_path: Path | None = None) -> str | None:
     """Read ``arxiv_version`` from a stem's sidecar, if present."""
     path = (
         Path(storage_path) / f"{filesystem_arxiv_stem(stem)}{METADATA_SUFFIX}"
@@ -122,9 +120,7 @@ def _sidecar_arxiv_version(
     return arxiv_version_suffix(stem)
 
 
-def resolve_stored_stem(
-    paper_id: str, storage_path: Optional[Path] = None
-) -> Optional[str]:
+def resolve_stored_stem(paper_id: str, storage_path: Path | None = None) -> str | None:
     """Map a requested paper ID to an on-disk markdown stem.
 
     Bare IDs resolve to the bare storage key when present, otherwise to the
@@ -166,9 +162,7 @@ def resolve_stored_stem(
     return None
 
 
-def cached_storage_labels(
-    paper_id: str, storage_path: Optional[Path] = None
-) -> list[str]:
+def cached_storage_labels(paper_id: str, storage_path: Path | None = None) -> list[str]:
     """Return display labels for locally cached stems of this paper.
 
     Used when a requested version is missing so callers can name what *is*
@@ -215,12 +209,12 @@ def paper_metadata_path(paper_id: str) -> Path:
 def save_paper_metadata(
     paper_id: str,
     *,
-    title: Optional[str] = None,
-    authors: Optional[List[str]] = None,
-    published: Optional[str] = None,
-    extractor_version: Optional[int] = None,
-    arxiv_version: Optional[str] = None,
-    path: Optional[Path] = None,
+    title: str | None = None,
+    authors: list[str] | None = None,
+    published: str | None = None,
+    extractor_version: int | None = None,
+    arxiv_version: str | None = None,
+    path: Path | None = None,
 ) -> None:
     """Persist lightweight paper metadata next to the downloaded markdown."""
     destination = path or paper_metadata_path(paper_id)
@@ -242,7 +236,7 @@ def save_paper_metadata(
     destination.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def _title_from_markdown(paper_id: str) -> Optional[str]:
+def _title_from_markdown(paper_id: str) -> str | None:
     """Best-effort title from the first non-empty markdown line (local only)."""
     md_path = Path(settings.STORAGE_PATH) / f"{filesystem_arxiv_stem(paper_id)}.md"
     try:
@@ -256,8 +250,8 @@ def _title_from_markdown(paper_id: str) -> Optional[str]:
 
 
 def _version_fields_for_stem(
-    stem: str, data: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    stem: str, data: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Return arxiv_version / versioned_id for a stored stem when known."""
     bare = bare_arxiv_id(stem)
     version = None
@@ -271,7 +265,7 @@ def _version_fields_for_stem(
                 version = normalized
     if version is None:
         version = _sidecar_arxiv_version(stem) or arxiv_version_suffix(stem)
-    fields: Dict[str, Any] = {"arxiv_version": version}
+    fields: dict[str, Any] = {"arxiv_version": version}
     if version:
         fields["versioned_id"] = f"{bare}{version}"
     else:
@@ -279,7 +273,7 @@ def _version_fields_for_stem(
     return fields
 
 
-def load_paper_metadata(paper_id: str) -> Dict[str, Any]:
+def load_paper_metadata(paper_id: str) -> dict[str, Any]:
     """Load local metadata for a stored paper without hitting the network."""
     bare = bare_arxiv_id(paper_id)
     stem = resolve_stored_stem(paper_id) or paper_id
@@ -313,8 +307,8 @@ def load_paper_metadata(paper_id: str) -> Dict[str, Any]:
 
 
 async def handle_list_papers(
-    arguments: Optional[Dict[str, Any]] = None,
-) -> List[types.TextContent]:
+    arguments: dict[str, Any] | None = None,
+) -> list[types.TextContent]:
     """Handle requests to list all stored papers."""
     try:
         paper_ids = list_papers()
@@ -328,7 +322,7 @@ async def handle_list_papers(
                 )
             ]
 
-        papers: List[Any] = (
+        papers: list[Any] = (
             paper_ids
             if compact
             else [load_paper_metadata(paper_id) for paper_id in paper_ids]
@@ -343,4 +337,4 @@ async def handle_list_papers(
         ]
 
     except Exception as e:
-        return [types.TextContent(type="text", text=f"Error: {str(e)}")]
+        return [types.TextContent(type="text", text=f"Error: {e!s}")]

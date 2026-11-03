@@ -7,12 +7,12 @@ import argparse
 import asyncio
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import tomllib
-from typing import Mapping
+from collections.abc import Mapping
+from pathlib import Path
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -203,8 +203,10 @@ async def smoke_wheel(wheel: Path) -> dict[str, object]:
             [
                 str(python),
                 "-c",
-                "import importlib.metadata; "
-                "print(importlib.metadata.version('arxiv-mcp-server'))",
+                (
+                    "import importlib.metadata; "
+                    "print(importlib.metadata.version('arxiv-mcp-server'))"
+                ),
             ],
             text=True,
             env=env,

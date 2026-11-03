@@ -1,14 +1,15 @@
 """Resource management and storage for arXiv papers."""
 
+import logging
 from pathlib import Path
-from typing import List
+
+import aiofiles
 import arxiv
 import pymupdf4llm
-import aiofiles
-import logging
-import mcp.types as types
-from ..config import Settings
+from mcp import types
+
 from ..arxiv_api import stream_pdf_to_path
+from ..config import Settings
 from ..tools.arxiv_ids import filesystem_arxiv_stem, logical_arxiv_id_from_stem
 
 logger = logging.getLogger("arxiv-mcp-server")
@@ -57,11 +58,11 @@ class PaperManager:
             raise ValueError(f"Paper with ID {paper_id} not found on arXiv.")
         except arxiv.ArxivError as e:
             raise ValueError(
-                f"Error: Failed to download paper {paper_id} from arXiv. Details: {str(e)}"
+                f"Error: Failed to download paper {paper_id} from arXiv. Details: {e!s}"
             )
         except Exception as e:
             raise ValueError(
-                f"Error: An unexpected error occurred while storing paper {paper_id}. Details: {str(e)}"
+                f"Error: An unexpected error occurred while storing paper {paper_id}. Details: {e!s}"
             )
 
     async def has_paper(self, paper_id: str) -> bool:
@@ -77,7 +78,7 @@ class PaperManager:
         logger.info(f"Found {len(paper_ids)} papers")
         return paper_ids
 
-    async def list_resources(self) -> List[types.Resource]:
+    async def list_resources(self) -> list[types.Resource]:
         """List all papers as MCP resources with metadata."""
         paper_ids = await self.list_papers()
         resources = []

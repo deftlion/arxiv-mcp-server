@@ -1,12 +1,12 @@
 """Handlers for prompt-related requests with paper analysis functionality."""
 
-from typing import List, Dict
-from mcp.types import Prompt, PromptMessage, TextContent, GetPromptResult
-from .prompts import PROMPTS
-from .deep_research_analysis_prompt import PAPER_ANALYSIS_PROMPT
-from .summarize_paper_prompt import SUMMARIZE_PAPER_PROMPT
+from mcp.types import GetPromptResult, Prompt, PromptMessage, TextContent
+
 from .compare_papers_prompt import COMPARE_PAPERS_PROMPT
+from .deep_research_analysis_prompt import PAPER_ANALYSIS_PROMPT
 from .literature_review_prompt import LITERATURE_REVIEW_PROMPT
+from .prompts import PROMPTS
+from .summarize_paper_prompt import SUMMARIZE_PAPER_PROMPT
 
 # Output structure for deep paper analysis
 OUTPUT_STRUCTURE = """
@@ -19,13 +19,13 @@ Present your analysis with the following structure:
 """
 
 
-async def list_prompts() -> List[Prompt]:
+async def list_prompts() -> list[Prompt]:
     """Handle prompts/list request."""
     return list(PROMPTS.values())
 
 
 async def get_prompt(
-    name: str, arguments: Dict[str, str] | None = None, session_id: str | None = None
+    name: str, arguments: dict[str, str] | None = None, session_id: str | None = None
 ) -> GetPromptResult:
     """Handle prompts/get request for paper analysis.
 

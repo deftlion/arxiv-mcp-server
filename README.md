@@ -496,7 +496,8 @@ git clone https://github.com/blazickjp/arxiv-mcp-server.git
 cd arxiv-mcp-server
 uv sync --extra test --extra dev
 uv run pytest
-uv run black --check .
+uv run ruff check .
+uv run ruff format --check .
 ```
 
 Run the development checkout from an MCP client with:

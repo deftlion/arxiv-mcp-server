@@ -1,8 +1,9 @@
 """Comprehensive tests for the get_abstract tool."""
 
 import json
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from arxiv_mcp_server.tools.get_abstract import (
     abstract_tool,

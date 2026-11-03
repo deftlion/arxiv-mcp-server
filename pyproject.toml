@@ -64,7 +64,7 @@ test = [
     "aioresponses>=0.7.6"
 ]
 dev = [
-    "black>=23.3.0"
+    "ruff>=0.17.3,<0.18"
 ]
 pro = [
     "sentence-transformers>=3.0.0",
@@ -86,21 +86,21 @@ packages = ["src/arxiv_mcp_server"]
 [tool.hatch.metadata]
 allow-direct-references = true
 
-[tool.black]
+[tool.ruff]
 line-length = 88
-target-version = ["py311"]
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-  | mcpb-build
-)/
-'''
+target-version = "py311"
+extend-exclude = ["mcpb-build"]
+
+[tool.ruff.lint]
+ignore = [
+    "BLE001", # MCP handlers turn any failure into a tool error by design
+    "RUF012", # HTML parser tag sets are read-only class constants
+    "S110",   # Best-effort cleanup must not mask the original outcome
+    "SIM102", # Nested conditions carry per-branch comments
+    "SIM117", # Nested patches read better than one long with statement
+    "TRY004", # ValueError is the input-validation contract for tool arguments
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/arxiv_mcp_server/tools/latex.py" = ["F401"] # Facade re-exporting latex_archive and latex_flatten
+"scripts/*" = ["ASYNC221"] # One-shot smoke script with nothing else on its event loop

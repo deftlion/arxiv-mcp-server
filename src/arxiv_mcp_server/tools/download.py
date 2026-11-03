@@ -1,28 +1,32 @@
 """Download functionality for the arXiv MCP server."""
 
-import arxiv
+import asyncio
 import gc
 import json
-import asyncio
-import httpx
+import logging
 import random
-import requests
-import time
-from html.parser import HTMLParser
 import re
+import threading
+import time
+import xml.etree.ElementTree as ET
+from html.parser import HTMLParser
 from pathlib import Path
-from typing import Dict, Any, List
-import mcp.types as types
+from typing import Any
+
+import arxiv
+import httpx
+import requests
+from mcp import types
 from mcp.types import ToolAnnotations
-from ..config import Settings, get_arxiv_client
+
 from ..arxiv_api import (
     ARXIV_RATE_LIMITER,
-    stream_pdf_to_path,
     ArxivRateLimitError,
     ArxivTimeoutError,
     retry_with_backoff,
+    stream_pdf_to_path,
 )
-from .content import add_content_payload, CONTENT_WARNING
+from ..config import Settings, get_arxiv_client
 from .arxiv_ids import (
     arxiv_version_number,
     arxiv_version_suffix,
@@ -31,17 +35,14 @@ from .arxiv_ids import (
     logical_arxiv_id_from_stem,
     parse_arxiv_id,
 )
-from .list_papers import resolve_stored_stem
-from .list_papers import save_paper_metadata
+from .content import CONTENT_WARNING, add_content_payload
+from .list_papers import resolve_stored_stem, save_paper_metadata
 from .search import (
     ARXIV_API_URL,
     ARXIV_NS,
     _rate_limited_get,
     _rate_limited_response,
 )
-import logging
-import threading
-import xml.etree.ElementTree as ET
 
 pymupdf4llm: Any = None
 fitz: Any = None
@@ -675,7 +676,7 @@ def _would_downgrade_cached_version(storage_stem: str, requested_id: str) -> boo
 
 def _response_version_fields(
     storage_stem: str, *, fallback_version: str | None = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Build ``arxiv_version`` / ``versioned_id`` fields for tool responses."""
     bare = bare_arxiv_id(storage_stem)
     version = (
@@ -683,14 +684,14 @@ def _response_version_fields(
         or fallback_version
         or arxiv_version_suffix(storage_stem)
     )
-    fields: Dict[str, Any] = {}
+    fields: dict[str, Any] = {}
     if version:
         fields["arxiv_version"] = version
         fields["versioned_id"] = f"{bare}{version}"
     return fields
 
 
-def _wants_force_refresh(arguments: Dict[str, Any]) -> bool:
+def _wants_force_refresh(arguments: dict[str, Any]) -> bool:
     """Return True when the caller asked to overwrite a cached paper."""
     return bool(arguments.get("force") or arguments.get("refresh"))
 
@@ -776,10 +777,8 @@ def _fetch_html_content(paper_id: str, deadline: float) -> str | None:
     Returns:
         HTML text content on success, None if HTML is unavailable or budget exhausted.
     """
-    import random
 
     # Retry loop is outside rate limiter so lock is released during sleeps
-    last_exception: Exception | None = None
 
     def remaining_time() -> float:
         return max(0.0, deadline - time.monotonic())
@@ -788,7 +787,7 @@ def _fetch_html_content(paper_id: str, deadline: float) -> str | None:
         # Check budget before attempt
         remaining = remaining_time()
         if remaining <= 0.1:
-            logger.info(f"HTML fetch budget exhausted, will try PDF")
+            logger.info("HTML fetch budget exhausted, will try PDF")
             return None
 
         try:
@@ -797,7 +796,7 @@ def _fetch_html_content(paper_id: str, deadline: float) -> str | None:
                 float(settings.get_request_timeout()), remaining * 0.9
             )
             if attempt_timeout < 1.0:
-                logger.info(f"HTML fetch insufficient budget for attempt, will try PDF")
+                logger.info("HTML fetch insufficient budget for attempt, will try PDF")
                 return None
             # Rate limiter only holds lock for this attempt
             # Check if we have enough time for the rate-limiter wait plus a minimal attempt
@@ -811,13 +810,12 @@ def _fetch_html_content(paper_id: str, deadline: float) -> str | None:
                 )
                 return None
             return ARXIV_RATE_LIMITER.run_sync(
-                lambda: _fetch_html_content_single_attempt(paper_id, attempt_timeout)
+                lambda: _fetch_html_content_single_attempt(paper_id, attempt_timeout)  # noqa: B023
             )
         except ArxivRateLimitError:
             # Rate limit errors should propagate immediately
             raise
-        except httpx.TimeoutException as e:
-            last_exception = e
+        except httpx.TimeoutException:
             if attempt < settings.ARXIV_MAX_RETRIES:
                 wait = min(
                     settings.ARXIV_INITIAL_BACKOFF
@@ -829,7 +827,7 @@ def _fetch_html_content(paper_id: str, deadline: float) -> str | None:
                 remaining = remaining_time()
                 if wait >= remaining or remaining <= 0.1:
                     logger.info(
-                        f"HTML fetch timeout: insufficient budget for retry, will try PDF"
+                        "HTML fetch timeout: insufficient budget for retry, will try PDF"
                     )
                     return None
                 wait = min(wait, remaining * 0.9)
@@ -846,8 +844,7 @@ def _fetch_html_content(paper_id: str, deadline: float) -> str | None:
                     f"HTML fetch timed out after {settings.ARXIV_MAX_RETRIES + 1} attempts, will try PDF"
                 )
                 return None
-        except (httpx.ConnectError, httpx.ConnectTimeout) as e:
-            last_exception = e
+        except (httpx.ConnectError, httpx.ConnectTimeout):
             if attempt < settings.ARXIV_MAX_RETRIES:
                 wait = min(
                     settings.ARXIV_INITIAL_BACKOFF
@@ -859,7 +856,7 @@ def _fetch_html_content(paper_id: str, deadline: float) -> str | None:
                 remaining = remaining_time()
                 if wait >= remaining or remaining <= 0.1:
                     logger.info(
-                        f"HTML fetch connection error: insufficient budget for retry, will try PDF"
+                        "HTML fetch connection error: insufficient budget for retry, will try PDF"
                     )
                     return None
                 wait = min(wait, remaining * 0.9)
@@ -1037,8 +1034,7 @@ def _fetch_pdf_content_unlocked(
     """
     if not _load_pdf_dependencies():
         raise ImportError(
-            "PDF conversion requires the pdf extra: "
-            "pip install arxiv-mcp-server[pdf]"
+            "PDF conversion requires the pdf extra: pip install arxiv-mcp-server[pdf]"
         )
 
     # Use a client with minimal retries for the metadata lookup to avoid
@@ -1158,8 +1154,9 @@ def _fetch_arxiv_metadata(
                   connect, and streaming read with both per-chunk checks and a
                   watchdog timer.
     """
-    import requests
     from datetime import datetime
+
+    import requests
 
     try:
         # Check if we have enough time budget remaining before attempting gate acquisition.
@@ -1345,7 +1342,7 @@ def _fetch_arxiv_metadata(
                 def stream_in_thread():
                     try:
                         thread_chunks = []
-                        read_timeout = float(settings.get_request_timeout())
+                        float(settings.get_request_timeout())
                         for chunk in response.iter_content(
                             chunk_size=1, decode_unicode=False
                         ):
@@ -1510,7 +1507,7 @@ def _fetch_arxiv_metadata(
                 if not date_str:
                     return ""
                 try:
-                    dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+                    dt = datetime.fromisoformat(date_str)
                     return dt.isoformat()
                 except Exception:
                     return date_str
@@ -1621,7 +1618,7 @@ def _persist_paper_metadata(
 # ---------------------------------------------------------------------------
 
 
-async def handle_download(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_download(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Handle paper download requests synchronously (HTML first, then PDF).
 
     Uses a single deadline for the entire operation (HTML + existence check + PDF)

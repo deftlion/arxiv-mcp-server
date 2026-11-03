@@ -1,11 +1,12 @@
 """Shared test fixtures for the arXiv MCP server test suite."""
 
-import pytest
 import tempfile
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, AsyncMock
-import arxiv
+from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
+
+import arxiv
+import pytest
 
 
 class MockAuthor:
@@ -27,7 +28,7 @@ def mock_paper():
     paper.authors = [MockAuthor("John Doe"), MockAuthor("Jane Smith")]
     paper.summary = "Test abstract"
     paper.categories = ["cs.AI", "cs.LG"]
-    paper.published = datetime(2023, 1, 1, tzinfo=timezone.utc)
+    paper.published = datetime(2023, 1, 1, tzinfo=UTC)
     paper.pdf_url = "https://arxiv.org/pdf/2103.12345"
     paper.comment = "Test comment"
     paper.journal_ref = "Test Journal 2023"

@@ -1,8 +1,7 @@
 """Tests for rate limiter deadline checking and validation."""
 
 import os
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 
 def test_rate_limiter_zero_pending_wait_proceeds():

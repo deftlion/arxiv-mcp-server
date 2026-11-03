@@ -1,12 +1,13 @@
 """Configuration settings for the arXiv MCP server."""
 
+import logging
 import sys
 from importlib import import_module
-from importlib.metadata import version, PackageNotFoundError
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-import logging
+
 import requests
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def _resolve_package_version() -> str:
@@ -133,7 +134,7 @@ class Settings(BaseSettings):
     SEMANTIC_SCHOLAR_API_KEY: str = ""
     model_config = SettingsConfigDict(extra="allow")
 
-    def model_post_init(self, __context) -> None:
+    def model_post_init(self, __context, /) -> None:
         """Validate timeout settings after initialization."""
         # Only log validation warnings once per process
         if not hasattr(Settings, "_validation_logged"):
@@ -185,7 +186,7 @@ class Settings(BaseSettings):
         # Check if ARXIV_REQUEST_TIMEOUT was explicitly set (case-insensitive)
         import os
 
-        env_keys = {k.upper(): k for k in os.environ.keys()}
+        env_keys = {k.upper(): k for k in os.environ}
 
         if "ARXIV_REQUEST_TIMEOUT" in env_keys:
             return self.ARXIV_REQUEST_TIMEOUT

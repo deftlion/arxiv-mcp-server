@@ -12,10 +12,10 @@ import json
 import logging
 import re
 import unicodedata
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
-import mcp.types as types
+from mcp import types
 from mcp.types import ToolAnnotations
 
 from ..config import Settings
@@ -27,9 +27,9 @@ from .arxiv_ids import (
 )
 from .search import (
     ARXIV_API_URL,
+    ArxivRateLimitError,
     _parse_arxiv_atom_response,
     _rate_limited_get,
-    ArxivRateLimitError,
     _rate_limited_response,
 )
 
@@ -79,7 +79,7 @@ def _base_id(paper_id: str) -> str:
     return bare_arxiv_id(paper_id)
 
 
-def _bares_with_versioned_sibling(ids: List[str]) -> set:
+def _bares_with_versioned_sibling(ids: list[str]) -> set:
     """Bare ids that also appear versioned in *ids* (for #241 collapse)."""
     return {_base_id(i) for i in ids if _VERSION_SUFFIX.search(i)}
 
@@ -89,7 +89,7 @@ def _year_of(published: str) -> str:
     return published[:4] if published[:4].isdigit() else ""
 
 
-def _citation_key(authors: List[str], year: str, title: str) -> str:
+def _citation_key(authors: list[str], year: str, title: str) -> str:
     """Deterministic key: first-author surname + year + first title word.
 
     Falls back to whatever parts are available so a key is always produced.
@@ -130,9 +130,9 @@ def _unique_key(base_key: str, used_keys: set) -> str:
     return key
 
 
-def _render_entry(key: str, paper: Dict[str, Any], requested_id: str) -> str:
+def _render_entry(key: str, paper: dict[str, Any], requested_id: str) -> str:
     """Render a single ``@misc`` BibTeX entry from authoritative arXiv metadata."""
-    fields: List[tuple] = []
+    fields: list[tuple] = []
     title = paper.get("title", "")
     if title:
         fields.append(("title", _bibtex_escape(title)))
@@ -154,7 +154,7 @@ def _render_entry(key: str, paper: Dict[str, Any], requested_id: str) -> str:
     return f"@misc{{{key},\n{body}\n}}"
 
 
-async def _fetch_metadata(ids: List[str]) -> Dict[str, Dict[str, Any]]:
+async def _fetch_metadata(ids: list[str]) -> dict[str, dict[str, Any]]:
     """Fetch authoritative metadata for *ids* in one arXiv API request.
 
     Returns a mapping keyed by ``versioned_id`` (e.g. ``1706.03762v7``) so
@@ -169,8 +169,8 @@ async def _fetch_metadata(ids: List[str]) -> Dict[str, Dict[str, Any]]:
         response = await _rate_limited_get(client, url)
     papers = _parse_arxiv_atom_response(response.text)
 
-    by_key: Dict[str, Dict[str, Any]] = {}
-    latest_by_bare: Dict[str, Dict[str, Any]] = {}
+    by_key: dict[str, dict[str, Any]] = {}
+    latest_by_bare: dict[str, dict[str, Any]] = {}
     for paper in papers:
         bare = paper.get("id")
         versioned = paper.get("versioned_id") or bare
@@ -188,7 +188,7 @@ async def _fetch_metadata(ids: List[str]) -> Dict[str, Dict[str, Any]]:
     return by_key
 
 
-def _error(message: str) -> List[types.TextContent]:
+def _error(message: str) -> list[types.TextContent]:
     return [
         types.TextContent(
             type="text", text=json.dumps({"status": "error", "message": message})
@@ -226,7 +226,7 @@ export_citations_tool = types.Tool(
 )
 
 
-async def handle_export_citations(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_export_citations(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Build BibTeX for the requested arXiv IDs with per-paper status reporting."""
     try:
         raw_ids = arguments.get("paper_ids")
@@ -250,7 +250,7 @@ async def handle_export_citations(arguments: Dict[str, Any]) -> List[types.TextC
         # Distinct versioned ids (v1 + v7) are kept separately (#212).
         bare_superseded = _bares_with_versioned_sibling(valid_ids)
 
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         used_keys: set = set()
         seen_normalized: set = set()
         for pid in raw_ids:
@@ -345,6 +345,6 @@ async def handle_export_citations(arguments: Dict[str, Any]) -> List[types.TextC
         # Never leak upstream URLs (issue #166).
         status = exc.response.status_code if exc.response is not None else "unknown"
         return _error(f"arXiv API HTTP error (HTTP {status})")
-    except Exception as exc:  # noqa: BLE001 - report, don't crash the server
+    except Exception as exc:
         logger.error(f"export_citations error: {exc}")
         return _error(str(exc))

@@ -6,16 +6,16 @@ import json
 import logging
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import arxiv
-import mcp.types as types
+from mcp import types
 from mcp.types import ToolAnnotations
 
-from ..config import Settings, get_arxiv_client
 from ..arxiv_api import ARXIV_RATE_LIMITER
+from ..config import Settings, get_arxiv_client
 from .list_papers import is_valid_arxiv_id
 
 np: Any = None
@@ -27,7 +27,7 @@ settings = Settings()
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 INDEX_DB_NAME = "semantic_index.db"
 
-_model: Optional[Any] = None
+_model: Any | None = None
 
 
 @dataclass
@@ -37,8 +37,8 @@ class IndexedPaper:
     paper_id: str
     title: str
     abstract: str
-    authors: List[str]
-    categories: List[str]
+    authors: list[str]
+    categories: list[str]
     published: str
     score: float
 
@@ -113,7 +113,7 @@ def _load_dependencies() -> bool:
     return True
 
 
-def _dependency_error() -> Optional[str]:
+def _dependency_error() -> str | None:
     """Return a friendly dependency error if pro packages are missing."""
     if not _load_dependencies():
         return (
@@ -170,8 +170,8 @@ def _upsert_index_record(
     paper_id: str,
     title: str,
     abstract: str,
-    authors: List[str],
-    categories: List[str],
+    authors: list[str],
+    categories: list[str],
     published: str = "",
 ) -> bool:
     """Insert or update an index record for a paper."""
@@ -209,7 +209,7 @@ def _upsert_index_record(
                 published,
                 embedding_array.tobytes(),
                 int(embedding_array.shape[0]),
-                datetime.now(timezone.utc).isoformat(),
+                datetime.now(UTC).isoformat(),
             ),
         )
         conn.commit()
@@ -265,7 +265,7 @@ def index_paper_from_result(paper: Any) -> bool:
         return False
 
 
-def _load_vectors(exclude_paper_id: Optional[str] = None) -> List[Dict[str, Any]]:
+def _load_vectors(exclude_paper_id: str | None = None) -> list[dict[str, Any]]:
     """Load all vectors (optionally excluding one paper)."""
     with _connect() as conn:
         if exclude_paper_id:
@@ -275,7 +275,7 @@ def _load_vectors(exclude_paper_id: Optional[str] = None) -> List[Dict[str, Any]
         else:
             rows = conn.execute("SELECT * FROM semantic_index").fetchall()
 
-    vectors: List[Dict[str, Any]] = []
+    vectors: list[dict[str, Any]] = []
     for row in rows:
         vector = np.frombuffer(
             row["embedding"], dtype=np.float32, count=row["embedding_dim"]
@@ -295,8 +295,8 @@ def _load_vectors(exclude_paper_id: Optional[str] = None) -> List[Dict[str, Any]
 
 
 def _rank_by_similarity(
-    query_vector: Any, candidates: List[Dict[str, Any]], max_results: int
-) -> List[IndexedPaper]:
+    query_vector: Any, candidates: list[dict[str, Any]], max_results: int
+) -> list[IndexedPaper]:
     """Compute cosine similarity (normalized vectors) and rank results."""
     if not candidates:
         return []
@@ -305,7 +305,7 @@ def _rank_by_similarity(
     similarities = matrix @ np.asarray(query_vector, dtype=np.float32)
 
     ranked_indices = np.argsort(similarities)[::-1][:max_results]
-    ranked_results: List[IndexedPaper] = []
+    ranked_results: list[IndexedPaper] = []
 
     for idx in ranked_indices:
         candidate = candidates[int(idx)]
@@ -324,7 +324,7 @@ def _rank_by_similarity(
     return ranked_results
 
 
-def _get_indexed_paper_vector(paper_id: str) -> Optional[Any]:
+def _get_indexed_paper_vector(paper_id: str) -> Any | None:
     """Fetch an indexed vector for a specific paper."""
     with _connect() as conn:
         row = conn.execute(
@@ -338,7 +338,7 @@ def _get_indexed_paper_vector(paper_id: str) -> Optional[Any]:
     return np.frombuffer(row["embedding"], dtype=np.float32, count=row["embedding_dim"])
 
 
-def rebuild_index(clear_existing: bool = True) -> Dict[str, Any]:
+def rebuild_index(clear_existing: bool = True) -> dict[str, Any]:
     """Rebuild semantic index from downloaded markdown papers."""
     dependency_error = _dependency_error()
     if dependency_error:
@@ -356,7 +356,7 @@ def rebuild_index(clear_existing: bool = True) -> Dict[str, Any]:
             conn.commit()
 
     indexed = 0
-    failed: List[str] = []
+    failed: list[str] = []
 
     for paper_id in paper_ids:
         success = index_paper_by_id(paper_id)
@@ -373,7 +373,7 @@ def rebuild_index(clear_existing: bool = True) -> Dict[str, Any]:
     }
 
 
-async def handle_reindex(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_reindex(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Handle reindex tool calls."""
     try:
         clear_existing = bool(arguments.get("clear_existing", True))
@@ -381,10 +381,10 @@ async def handle_reindex(arguments: Dict[str, Any]) -> List[types.TextContent]:
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
     except Exception as exc:
         logger.error("Reindex failed: %s", exc)
-        return [types.TextContent(type="text", text=f"Error: {str(exc)}")]
+        return [types.TextContent(type="text", text=f"Error: {exc!s}")]
 
 
-async def handle_semantic_search(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_semantic_search(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Handle semantic search queries and similar-paper lookups."""
     try:
         dependency_error = _dependency_error()
@@ -450,4 +450,4 @@ async def handle_semantic_search(arguments: Dict[str, Any]) -> List[types.TextCo
         return [types.TextContent(type="text", text=json.dumps(response, indent=2))]
     except Exception as exc:
         logger.error("Semantic search failed: %s", exc)
-        return [types.TextContent(type="text", text=f"Error: {str(exc)}")]
+        return [types.TextContent(type="text", text=f"Error: {exc!s}")]

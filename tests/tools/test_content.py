@@ -1,9 +1,5 @@
 """Tests for bounded-by-default paper content pagination (#127)."""
 
-import json
-
-import pytest
-
 from arxiv_mcp_server.tools.content import (
     DEFAULT_MAX_CHARS,
     add_content_payload,

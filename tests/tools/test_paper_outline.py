@@ -111,7 +111,7 @@ Empty title ignored
     assert "Also Real" in titles
     assert "Weird Spaces" in titles
     # h3 after h2 -> 1.1.1 style with missing? Actually after ## (1.1), ### is 1.1.1
-    skipped = [s for s in sections if s.title == "Skipped Level"][0]
+    skipped = next(s for s in sections if s.title == "Skipped Level")
     assert skipped.level == 3
 
 
@@ -1742,7 +1742,7 @@ def test_attention_model_architecture_kept():
 
     sections = parse_markdown_sections(ATTENTION_EXCERPT)
     titles = [s.title for s in sections]
-    section_ids = [s.section_id for s in sections]
+    [s.section_id for s in sections]
 
     # All real sections kept
     assert "Introduction" in titles
@@ -2127,12 +2127,12 @@ Final section.
 
     # Fake body-list headings should NOT be present (rejected by sequence check)
     # These are Title Case so they would pass the sentence-case rule
-    assert (
-        "Load The Model" not in titles
-    ), "Sequence check failed: 1. promoted after section 3"
-    assert (
-        "Run The Inference" not in titles
-    ), "Sequence check failed: 2. promoted after section 3"
+    assert "Load The Model" not in titles, (
+        "Sequence check failed: 1. promoted after section 3"
+    )
+    assert "Run The Inference" not in titles, (
+        "Sequence check failed: 2. promoted after section 3"
+    )
 
     # Should have exactly 4 sections (not 6 with the fake body list items)
     assert len(titles) == 4, f"Expected 4 sections, got {len(titles)}: {titles}"
@@ -2170,7 +2170,7 @@ def test_appendices_after_references_included():
     assert "DPO Implementation" not in refs_body
 
     # Appendix subsections are properly nested
-    by_title = {s.title: s for s in sections}
+    {s.title: s for s in sections}
 
     # A.1 subsection should exist under Appendix A
     a_derivations = [
@@ -2411,9 +2411,9 @@ def test_llama2_acknowledgments_stays_at_level_3():
 
     # Find Acknowledgments section
     ack_sections = [s for s in sections if "Acknowledgments" in s.title]
-    assert (
-        len(ack_sections) == 1
-    ), f"Expected 1 Acknowledgments, got {len(ack_sections)}: {titles}"
+    assert len(ack_sections) == 1, (
+        f"Expected 1 Acknowledgments, got {len(ack_sections)}: {titles}"
+    )
 
     ack = ack_sections[0]
     # A.1.1 = level 3 (A=1, .1=+1, .1=+1)
@@ -2442,14 +2442,14 @@ def test_post_references_guard_rejects_fakes():
         "CoT",
     ]
     for fake in forbidden:
-        assert (
-            fake not in titles
-        ), f"Post-References guard failed: '{fake}' became a section"
+        assert fake not in titles, (
+            f"Post-References guard failed: '{fake}' became a section"
+        )
 
     # But real appendices should be present
-    assert any(
-        "Appendix" in t or "Prompting Details" in t for t in titles
-    ), "Post-References mode should still accept real appendices"
+    assert any("Appendix" in t or "Prompting Details" in t for t in titles), (
+        "Post-References mode should still accept real appendices"
+    )
 
 
 def test_bare_table_cells_after_references_rejected():
@@ -2496,13 +2496,13 @@ More details here.
 
     # Bare table cells rejected
     assert "MQA" not in titles, "Bare table cell 'MQA' should be rejected"
-    assert (
-        "Limitations" not in titles
-    ), "Bare table cell 'Limitations' should be rejected"
+    assert "Limitations" not in titles, (
+        "Bare table cell 'Limitations' should be rejected"
+    )
     assert "Method" not in titles, "Bare table cell 'Method' should be rejected"
-    assert (
-        "Learning Rate" not in titles
-    ), "Bare table cell 'Learning Rate' should be rejected"
+    assert "Learning Rate" not in titles, (
+        "Bare table cell 'Learning Rate' should be rejected"
+    )
     assert "0.001" not in titles
 
     # Real appendix accepted
@@ -2614,9 +2614,9 @@ def test_post_references_mutation_check():
     turpin_titles = [s.title for s in turpin_sections]
     assert "Snarks" not in turpin_titles, "Mutation: Snarks should be rejected"
     assert "Hyperbaton" not in turpin_titles, "Mutation: Hyperbaton should be rejected"
-    assert (
-        "Web Of Lies" not in turpin_titles
-    ), "Mutation: Web Of Lies should be rejected"
+    assert "Web Of Lies" not in turpin_titles, (
+        "Mutation: Web Of Lies should be rejected"
+    )
     assert "Failed" not in turpin_titles, "Mutation: Failed should be rejected"
 
     # Test 2: Bare table cells fixture
@@ -2745,9 +2745,9 @@ Appendix H
     titles = [s.title for s in sections]
 
     # Lowercase single-word 'conclusion' should NOT be a section
-    assert (
-        "conclusion" not in titles
-    ), "Lowercase single-word 'conclusion' should be rejected"
+    assert "conclusion" not in titles, (
+        "Lowercase single-word 'conclusion' should be rejected"
+    )
 
     # Lowercase 'reference' should NOT be a section
     assert "reference" not in titles, "Lowercase 'reference' should be rejected"
@@ -2759,9 +2759,9 @@ Appendix H
     # H.3 Conclusion should end before References starts (belt and braces test)
     h3_section = next((s for s in sections if s.title == "H.3 Conclusion"), None)
     assert h3_section is not None, "H.3 Conclusion should exist"
-    assert (
-        h3_section.end <= refs_section.start
-    ), "H.3 should end before References starts"
+    assert h3_section.end <= refs_section.start, (
+        "H.3 should end before References starts"
+    )
 
     # References should run to EOF (no appendices after it in this paper)
     assert refs_section.end == len(md), "References should run to EOF"
@@ -2803,9 +2803,9 @@ References
 
     # Should have two References sections
     refs_count = sum(1 for t in titles if t == "References")
-    assert (
-        refs_count == 2
-    ), f"Expected 2 References sections, got {refs_count}: {titles}"
+    assert refs_count == 2, (
+        f"Expected 2 References sections, got {refs_count}: {titles}"
+    )
 
     # Appendix A Implementation Details should exist (two-line pattern)
     appendix_a = next((s for s in sections if "Appendix A" in s.title), None)
@@ -2816,9 +2816,9 @@ References
     second_refs = refs_sections[1]
 
     # Appendix A should end at or before the second References starts
-    assert (
-        appendix_a.end <= second_refs.start
-    ), f"Appendix A (end={appendix_a.end}) should end before second References (start={second_refs.start})"
+    assert appendix_a.end <= second_refs.start, (
+        f"Appendix A (end={appendix_a.end}) should end before second References (start={second_refs.start})"
+    )
 
 
 def test_lowercase_single_word_bare_title_rejected():
@@ -2852,17 +2852,17 @@ Another real section (capitalized).
     titles = [s.title for s in sections]
 
     # Lowercase single-word 'conclusion' should be rejected
-    assert (
-        titles.count("conclusion") == 0
-    ), "Lowercase single-word 'conclusion' should be rejected"
+    assert titles.count("conclusion") == 0, (
+        "Lowercase single-word 'conclusion' should be rejected"
+    )
 
     # Capitalized 'Conclusion' should be accepted
     assert "Conclusion" in titles, "Capitalized 'Conclusion' should be accepted"
 
     # Lowercase single-word 'method' should be rejected
-    assert (
-        titles.count("method") == 0
-    ), "Lowercase single-word 'method' should be rejected"
+    assert titles.count("method") == 0, (
+        "Lowercase single-word 'method' should be rejected"
+    )
 
     # Capitalized 'Method' should be accepted
     assert "Method" in titles, "Capitalized 'Method' should be accepted"
@@ -2893,9 +2893,9 @@ E. Akyürek et al.
     assert titles == ["References"], f"Got unexpected sections: {titles}"
 
     # 'Appendix F' with punctuation-only title '.' should NOT be a section
-    assert not any(
-        "Appendix F" in t for t in titles
-    ), "Punctuation-only appendix title should be rejected"
+    assert not any("Appendix F" in t for t in titles), (
+        "Punctuation-only appendix title should be rejected"
+    )
 
 
 @pytest.mark.asyncio
@@ -2944,12 +2944,12 @@ Second data section with same title.
     # Error message must list BOTH candidates
     error_msg = result["message"]
     assert "ambiguous" in error_msg.lower(), "Error should mention ambiguity"
-    assert (
-        "F.1 Data" in error_msg or "2.1 (F.1 Data)" in error_msg
-    ), "Error must list F.1 Data candidate"
-    assert (
-        "G.1 Data" in error_msg or "3.1 (G.1 Data)" in error_msg
-    ), "Error must list G.1 Data candidate"
+    assert "F.1 Data" in error_msg or "2.1 (F.1 Data)" in error_msg, (
+        "Error must list F.1 Data candidate"
+    )
+    assert "G.1 Data" in error_msg or "3.1 (G.1 Data)" in error_msg, (
+        "Error must list G.1 Data candidate"
+    )
 
     # Verify we can still look up by exact section ID
     response_f = await handle_read_paper_section(

@@ -2,8 +2,8 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-import mcp.types as types
 import pytest
+from mcp import types
 
 from arxiv_mcp_server import server as server_module
 

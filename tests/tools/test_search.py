@@ -1,27 +1,30 @@
 """Tests for paper search functionality."""
 
-import pytest
+import asyncio
 import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
-from unittest.mock import patch, MagicMock, AsyncMock
+import pytest
+
 from arxiv_mcp_server.tools import handle_search
 from arxiv_mcp_server.tools import search as search_module
 from arxiv_mcp_server.tools.search import (
+    ABSTRACT_SNIPPET_CHARS,
     DEFAULT_ABSTRACT_MODE,
     DEFAULT_MAX_RESULTS,
-    ABSTRACT_SNIPPET_CHARS,
     SORT_BY_VALUES,
-    _validate_categories,
-    _raw_arxiv_search,
-    _rate_limited_get,
-    _parse_arxiv_atom_response,
-    _parse_opensearch_total_results,
-    _build_search_response,
     _apply_abstract_mode,
-    _snippet_abstract,
+    _build_search_response,
     _normalize_abstract_mode,
     _normalize_sort_by,
+    _parse_arxiv_atom_response,
+    _parse_opensearch_total_results,
+    _rate_limited_get,
+    _raw_arxiv_search,
     _scope_user_query,
+    _snippet_abstract,
+    _validate_categories,
     build_arxiv_search_query,
     build_arxiv_search_url,
 )
@@ -228,7 +231,6 @@ def test_parse_arxiv_atom_response():
 @pytest.mark.asyncio
 async def test_raw_arxiv_search_builds_correct_url():
     """Test that raw search builds correct URL with date filters."""
-    import httpx
 
     # Mock the httpx client
     mock_response = MagicMock()
@@ -334,7 +336,7 @@ async def test_search_max_results_limiting():
     xml = _atom_feed_with_totals(entry_count=1, total_results=50)
     _, mock_client = _mock_httpx_response(xml)
 
-    with patch("httpx.AsyncClient", return_value=mock_client) as mock_cls:
+    with patch("httpx.AsyncClient", return_value=mock_client):
         result = await handle_search({"query": "test", "max_results": 1000})
 
         content = json.loads(result[0].text)
@@ -543,7 +545,7 @@ def _atom_feed_with_totals(entry_count: int, total_results: int) -> str:
           xmlns:arxiv=\"http://arxiv.org/schemas/atom\"
           xmlns:opensearch=\"http://a9.com/-/spec/opensearch/1.1/\">
         <opensearch:totalResults>{total_results}</opensearch:totalResults>
-        {''.join(entries)}
+        {"".join(entries)}
     </feed>"""
 
 
@@ -859,7 +861,7 @@ async def test_search_defaults_to_five_compact_snippets():
           xmlns:arxiv="http://arxiv.org/schemas/atom"
           xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/">
         <opensearch:totalResults>42</opensearch:totalResults>
-        {''.join(entries)}
+        {"".join(entries)}
     </feed>"""
     _, mock_client = _mock_httpx_response(xml)
 
@@ -1145,8 +1147,9 @@ async def test_search_no_criteria_returns_structured_error():
 
 def test_search_backoff_seconds_matches_citation_graph_pattern():
     """Backoff ladder should use exponential delay with jitter (#238)."""
-    from arxiv_mcp_server.arxiv_api import _compute_backoff_seconds
     import random
+
+    from arxiv_mcp_server.arxiv_api import _compute_backoff_seconds
 
     with patch.object(random, "random", return_value=0.5):
         assert _compute_backoff_seconds(0, None, 2.0, 60.0) == 2.0
@@ -1189,7 +1192,7 @@ async def test_search_retries_on_429_then_succeeds():
 
     with (
         patch("httpx.AsyncClient", return_value=mock_client),
-        patch.object(search_module.asyncio, "sleep", new_callable=AsyncMock) as sleep,
+        patch.object(asyncio, "sleep", new_callable=AsyncMock) as sleep,
         patch("random.random", return_value=0.5),
     ):
         result = await handle_search({"query": "transformers", "max_results": 1})
@@ -1226,7 +1229,7 @@ async def test_search_429_exhausted_returns_soft_rate_limited():
 
     with (
         patch("httpx.AsyncClient", return_value=mock_client),
-        patch.object(search_module.asyncio, "sleep", new_callable=AsyncMock) as sleep,
+        patch.object(asyncio, "sleep", new_callable=AsyncMock) as sleep,
         patch("random.random", return_value=0.5),
     ):
         result = await handle_search({"query": "transformers", "max_results": 1})
@@ -1263,7 +1266,7 @@ async def test_rate_limited_get_retries_503_then_succeeds():
     mock_client.get = AsyncMock(side_effect=[limited, ok])
 
     with (
-        patch.object(search_module.asyncio, "sleep", new_callable=AsyncMock) as sleep,
+        patch.object(asyncio, "sleep", new_callable=AsyncMock) as sleep,
         patch("random.random", return_value=0.5),
     ):
         response = await _rate_limited_get(
@@ -1297,7 +1300,7 @@ async def test_rate_limited_get_retries_406_minimally_then_succeeds():
     mock_client.get = AsyncMock(side_effect=[limited, ok])
 
     with (
-        patch.object(search_module.asyncio, "sleep", new_callable=AsyncMock) as sleep,
+        patch.object(asyncio, "sleep", new_callable=AsyncMock) as sleep,
         patch("random.random", return_value=0.5),
     ):
         response = await _rate_limited_get(
@@ -1330,7 +1333,7 @@ async def test_search_406_exhausted_returns_soft_rate_limited():
 
     with (
         patch("httpx.AsyncClient", return_value=mock_client),
-        patch.object(search_module.asyncio, "sleep", new_callable=AsyncMock) as sleep,
+        patch.object(asyncio, "sleep", new_callable=AsyncMock) as sleep,
         patch("random.random", return_value=0.5),
     ):
         result = await handle_search({"query": "transformers", "max_results": 1})

@@ -2,10 +2,10 @@
 """Test hidden-_fp stall (headers then no bytes) stays within budget."""
 
 import http.server
-import socketserver
+import sys
 import threading
 import time
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 from arxiv_mcp_server.tools.download import _fetch_arxiv_metadata
 
@@ -113,7 +113,7 @@ if __name__ == "__main__":
         and elapsed_7s <= 7.5
     ):
         print("\n✓ All hidden-_fp stall tests passed")
-        exit(0)
+        sys.exit(0)
     else:
         print("\n✗ Some tests failed")
-        exit(1)
+        sys.exit(1)

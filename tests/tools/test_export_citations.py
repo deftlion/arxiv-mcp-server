@@ -246,7 +246,7 @@ async def test_all_failed_batch_is_mcp_error_but_keeps_diagnostics(monkeypatch):
     """
     from unittest.mock import MagicMock
 
-    import mcp.types as types
+    from mcp import types
 
     from arxiv_mcp_server import server as server_module
 
@@ -641,6 +641,7 @@ async def test_fetch_metadata_keeps_each_versioned_entry(monkeypatch):
 async def test_rate_limit_error_returns_rate_limited_response(monkeypatch):
     """ArxivRateLimitError should return status=rate_limited with retry info (#277)."""
     from unittest.mock import AsyncMock
+
     from arxiv_mcp_server.tools.search import ArxivRateLimitError
 
     monkeypatch.setattr(
@@ -667,6 +668,7 @@ async def test_rate_limit_error_returns_rate_limited_response(monkeypatch):
 async def test_http_status_error_does_not_leak_url(monkeypatch):
     """HTTPStatusError should not expose upstream URLs (#166, #277)."""
     from unittest.mock import AsyncMock
+
     import httpx
 
     request = httpx.Request("GET", "https://export.arxiv.org/api/query?id_list=x")

@@ -1,6 +1,7 @@
 """Tests for research alert tools."""
 
 import json
+from datetime import UTC
 from pathlib import Path
 
 import pytest
@@ -471,11 +472,12 @@ async def test_check_alerts_truncated_page_does_not_jump_watermark_to_now(
     # Must not have jumped to wall-clock "now".
     assert not stored["last_checked"].startswith("2026-")
     assert "T" in stored["last_checked"]
+    from datetime import datetime, timedelta
+
     from dateutil import parser as date_parser
-    from datetime import datetime, timezone, timedelta
 
     watermark = date_parser.parse(stored["last_checked"])
-    assert watermark < datetime.now(timezone.utc) - timedelta(days=30)
+    assert watermark < datetime.now(UTC) - timedelta(days=30)
 
 
 @pytest.mark.asyncio
@@ -679,12 +681,11 @@ async def test_check_alerts_full_page_marks_caught_up(monkeypatch, alerts_test_e
     stored = alerts_module._load_watches()["topics"][0]["last_checked"]
     assert stored != "2025-01-01T00:00:00+00:00"
     assert stored != "2025-01-15T00:00:00+00:00"
-    from dateutil import parser as date_parser
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta
 
-    assert date_parser.parse(stored) >= datetime.now(timezone.utc) - timedelta(
-        minutes=5
-    )
+    from dateutil import parser as date_parser
+
+    assert date_parser.parse(stored) >= datetime.now(UTC) - timedelta(minutes=5)
 
 
 def test_page_is_truncated_helpers():
@@ -715,8 +716,9 @@ def test_page_is_truncated_helpers():
 @pytest.mark.asyncio
 async def test_watch_topic_create_seeds_last_checked_to_now(alerts_test_env):
     """Regression #227: new watches must seed last_checked so history is not alerted."""
+    from datetime import datetime, timedelta
+
     from dateutil import parser as date_parser
-    from datetime import datetime, timezone, timedelta
 
     response = await alerts_module.handle_watch_topic(
         {"topic": "mixture-of-experts flood", "categories": ["cs.LG"]}
@@ -725,7 +727,7 @@ async def test_watch_topic_create_seeds_last_checked_to_now(alerts_test_env):
     assert topic["last_checked"] is not None
     assert topic["last_checked"] == topic["created_at"]
     watermark = date_parser.parse(topic["last_checked"])
-    assert watermark >= datetime.now(timezone.utc) - timedelta(minutes=5)
+    assert watermark >= datetime.now(UTC) - timedelta(minutes=5)
 
     stored = alerts_module._load_watches()["topics"][0]
     assert stored["last_checked"] == topic["last_checked"]
@@ -737,8 +739,9 @@ async def test_check_alerts_new_watch_does_not_dump_historical_papers(
     monkeypatch, alerts_test_env
 ):
     """Regression #227: first check after create returns 0 alerts for old papers."""
+    from datetime import datetime, timedelta
+
     from dateutil import parser as date_parser
-    from datetime import datetime, timezone, timedelta
 
     calls = []
 
@@ -793,7 +796,7 @@ async def test_check_alerts_new_watch_does_not_dump_historical_papers(
     # Watermark must not jump into the distant past (the #227 failure mode).
     assert stored["last_checked"] is not None
     watermark = date_parser.parse(stored["last_checked"])
-    assert watermark >= datetime.now(timezone.utc) - timedelta(minutes=5)
+    assert watermark >= datetime.now(UTC) - timedelta(minutes=5)
     assert not stored["last_checked"].startswith("2022-")
     assert not stored["last_checked"].startswith("2023-")
     # date_from passed to search should be the seeded creation watermark.
@@ -805,11 +808,9 @@ async def test_check_alerts_new_watch_still_surfaces_future_papers(
     monkeypatch, alerts_test_env
 ):
     """Regression #227: papers published after watch create still alert normally."""
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta
 
-    future = (datetime.now(timezone.utc) + timedelta(days=1)).strftime(
-        "%Y-%m-%dT%H:%M:%S+00:00"
-    )
+    future = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
     async def _mock_future(**kwargs):
         return (

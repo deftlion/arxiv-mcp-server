@@ -3,12 +3,12 @@
 import asyncio
 import json
 import os
-from pathlib import Path
 import sys
 import tempfile
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import urlsplit
 
 
@@ -170,9 +170,9 @@ async def run_client(http_server, directory):
 
             # Assertions
             assert elapsed <= 7.5, f"{MODE}: elapsed {elapsed:.3f}s exceeds 7.5s target"
-            assert (
-                result_json["metadata_requests"] == 1
-            ), f"{MODE}: expected 1 metadata request, got {result_json['metadata_requests']}"
+            assert result_json["metadata_requests"] == 1, (
+                f"{MODE}: expected 1 metadata request, got {result_json['metadata_requests']}"
+            )
             print(f"\n✓ {MODE} case: elapsed {elapsed:.3f}s ≤ 7.5s, requests = 1")
 
             alive = await session.call_tool("list_papers", {"compact": True})

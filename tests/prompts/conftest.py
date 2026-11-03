@@ -1,7 +1,8 @@
 """Test fixtures for prompt tests."""
 
+from typing import Any
+
 import pytest
-from typing import Dict, Any
 
 
 @pytest.fixture
@@ -30,7 +31,7 @@ Test discussion section.
 
 
 @pytest.fixture
-def research_discovery_args() -> Dict[str, Any]:
+def research_discovery_args() -> dict[str, Any]:
     """Sample arguments for research discovery prompt."""
     return {
         "topic": "machine learning",
@@ -40,13 +41,13 @@ def research_discovery_args() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def paper_analysis_args() -> Dict[str, Any]:
+def paper_analysis_args() -> dict[str, Any]:
     """Sample arguments for paper analysis prompt."""
     return {"paper_id": "2401.12345", "focus_area": "methodology"}
 
 
 @pytest.fixture
-def literature_synthesis_args() -> Dict[str, Any]:
+def literature_synthesis_args() -> dict[str, Any]:
     """Sample arguments for literature synthesis prompt."""
     return {"paper_ids": ["2401.12345", "2401.67890"], "synthesis_type": "themes"}
 

@@ -1,16 +1,18 @@
 """Tests for the unified retry infrastructure in arxiv_api."""
 
 import asyncio
-import pytest
+from unittest.mock import AsyncMock
+
 import httpx
-from unittest.mock import AsyncMock, Mock, patch
+import pytest
+
 from arxiv_mcp_server.arxiv_api import (
-    retry_with_backoff,
-    ArxivTimeoutError,
     ArxivConnectionError,
     ArxivRateLimitError,
+    ArxivTimeoutError,
     _compute_backoff_seconds,
     _parse_retry_after_seconds,
+    retry_with_backoff,
 )
 
 

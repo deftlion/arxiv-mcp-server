@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import mcp.types as types
 import pytest
+from mcp import types
 
 from arxiv_mcp_server import server as server_module
 from arxiv_mcp_server.tools import read_paper as read_module

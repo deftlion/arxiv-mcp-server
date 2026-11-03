@@ -12,7 +12,6 @@ for per-mechanism unit tests that verify each mechanism independently.
 """
 
 import http.server
-import socketserver
 import threading
 import time
 from unittest.mock import Mock, patch
@@ -42,7 +41,6 @@ class SlowHandler(http.server.BaseHTTPRequestHandler):
 
     def log_message(self, *args):
         """Suppress HTTP server logs during tests."""
-        pass
 
     def do_GET(self):
         """Handle GET request with delays based on mode."""
@@ -179,9 +177,9 @@ def test_trickle_returns_none_within_deadline(slow_server):
 
     assert result is None, f"Expected None, got {result}"
     assert elapsed < 3.5, f"Trickle took {elapsed:.2f}s, expected < 3.5s"
-    assert (
-        SlowHandler.request_count == 1
-    ), f"Expected 1 request, got {SlowHandler.request_count}"
+    assert SlowHandler.request_count == 1, (
+        f"Expected 1 request, got {SlowHandler.request_count}"
+    )
 
 
 def test_trickle_then_stall_returns_none_within_deadline(slow_server):
@@ -212,9 +210,9 @@ def test_trickle_then_stall_returns_none_within_deadline(slow_server):
 
     assert result is None, f"Expected None, got {result}"
     assert elapsed < 4.5, f"Trickle-then-stall took {elapsed:.2f}s, expected < 4.5s"
-    assert (
-        SlowHandler.request_count == 1
-    ), f"Expected 1 request, got {SlowHandler.request_count}"
+    assert SlowHandler.request_count == 1, (
+        f"Expected 1 request, got {SlowHandler.request_count}"
+    )
 
 
 def test_byte_by_byte_slow_returns_none_within_deadline(slow_server):
@@ -245,9 +243,9 @@ def test_byte_by_byte_slow_returns_none_within_deadline(slow_server):
 
     assert result is None, f"Expected None, got {result}"
     assert elapsed < 3.5, f"Byte-by-byte took {elapsed:.2f}s, expected < 3.5s"
-    assert (
-        SlowHandler.request_count == 1
-    ), f"Expected 1 request, got {SlowHandler.request_count}"
+    assert SlowHandler.request_count == 1, (
+        f"Expected 1 request, got {SlowHandler.request_count}"
+    )
 
 
 def test_socket_unavailable_fallback_within_deadline(slow_server):
@@ -293,12 +291,12 @@ def test_socket_unavailable_fallback_within_deadline(slow_server):
 
     # Thread backstop should enforce deadline
     assert result is None, f"Expected None, got {result}"
-    assert (
-        3.5 <= elapsed < 4.5
-    ), f"Socket-unavailable stall took {elapsed:.2f}s, expected 3.5-4.5s"
-    assert (
-        SlowHandler.request_count == 1
-    ), f"Expected 1 request, got {SlowHandler.request_count}"
+    assert 3.5 <= elapsed < 4.5, (
+        f"Socket-unavailable stall took {elapsed:.2f}s, expected 3.5-4.5s"
+    )
+    assert SlowHandler.request_count == 1, (
+        f"Expected 1 request, got {SlowHandler.request_count}"
+    )
 
 
 def test_socket_timeout_mechanism_alone_enforces_deadline(slow_server):
@@ -342,9 +340,9 @@ def test_socket_timeout_mechanism_alone_enforces_deadline(slow_server):
 
         # Socket timeout mechanism should enforce deadline
         assert result is None, f"Expected None, got {result}"
-        assert (
-            2.5 <= elapsed < 3.5
-        ), f"Socket timeout took {elapsed:.2f}s, expected 2.5-3.5s"
+        assert 2.5 <= elapsed < 3.5, (
+            f"Socket timeout took {elapsed:.2f}s, expected 2.5-3.5s"
+        )
         assert SlowHandler.request_count == 1
     finally:
         os.environ.pop("_ARXIV_MCP_TEST_SKIP_WATCHDOG", None)
@@ -441,9 +439,9 @@ def test_per_byte_check_alone_enforces_deadline(slow_server):
 
         # Per-byte check should enforce deadline
         assert result is None, f"Expected None, got {result}"
-        assert (
-            2.5 <= elapsed < 3.5
-        ), f"Per-byte check took {elapsed:.2f}s, expected 2.5-3.5s"
+        assert 2.5 <= elapsed < 3.5, (
+            f"Per-byte check took {elapsed:.2f}s, expected 2.5-3.5s"
+        )
         assert SlowHandler.request_count == 1
     finally:
         os.environ.pop("_ARXIV_MCP_TEST_SKIP_WATCHDOG", None)
@@ -478,9 +476,9 @@ def test_headers_stall_returns_none_within_deadline(slow_server):
 
     assert result is None, f"Expected None, got {result}"
     assert elapsed < 3.5, f"Headers stall took {elapsed:.2f}s, expected < 3.5s"
-    assert (
-        SlowHandler.request_count == 1
-    ), f"Expected 1 request, got {SlowHandler.request_count}"
+    assert SlowHandler.request_count == 1, (
+        f"Expected 1 request, got {SlowHandler.request_count}"
+    )
 
 
 def test_fast_response_succeeds(slow_server):

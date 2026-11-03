@@ -2,20 +2,19 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 from urllib.parse import quote
 
 import httpx
-import mcp.types as types
+from mcp import types
 from mcp.types import ToolAnnotations
 
-from ..config import Settings
 from ..arxiv_api import retry_with_backoff
+from ..config import Settings
 from .arxiv_ids import (
     arxiv_version_suffix,
     bare_arxiv_id,
@@ -92,9 +91,9 @@ class SemanticScholarRateLimitError(Exception):
     """Raised when Semantic Scholar keeps returning HTTP 429."""
 
 
-def _normalize_paper_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _normalize_paper_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Normalize paper lists returned by Semantic Scholar."""
-    normalized: List[Dict[str, Any]] = []
+    normalized: list[dict[str, Any]] = []
     for item in items:
         paper_id = item.get("paperId")
         title = item.get("title", "")
@@ -116,7 +115,7 @@ def _normalize_paper_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return normalized
 
 
-def _s2_headers() -> Dict[str, str]:
+def _s2_headers() -> dict[str, str]:
     """Build Semantic Scholar request headers, including an optional API key."""
     headers = {
         "User-Agent": (
@@ -148,9 +147,9 @@ def _rate_limited_payload(
     max_citations: int | None = None,
     message: str | None = None,
     status_code: int | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Soft rate-limit result so callers can continue without a hard tool error."""
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "status": "rate_limited",
         "error": "RATE_LIMITED",
         "message": message if message is not None else _rate_limit_message(),
@@ -189,7 +188,7 @@ def _cache_key(arxiv_id: str, max_citations: int) -> str:
     return f"{bare_id}__limit_{max_citations}.json"
 
 
-def _load_cached_graph(arxiv_id: str, max_citations: int) -> Dict[str, Any] | None:
+def _load_cached_graph(arxiv_id: str, max_citations: int) -> dict[str, Any] | None:
     """Load a cached citation graph if valid and not expired.
 
     This function looks for a cache file that matches the arxiv_id and has
@@ -280,7 +279,7 @@ def _load_cached_graph(arxiv_id: str, max_citations: int) -> Dict[str, Any] | No
 
 
 def _save_cached_graph(
-    arxiv_id: str, max_citations: int, result: Dict[str, Any]
+    arxiv_id: str, max_citations: int, result: dict[str, Any]
 ) -> None:
     """Save a citation graph result to disk cache."""
     cache_file = _cache_dir() / _cache_key(arxiv_id, max_citations)
@@ -296,7 +295,7 @@ def _save_cached_graph(
 
 
 async def _s2_get(
-    client: httpx.AsyncClient, url: str, params: Dict[str, Any] | None = None
+    client: httpx.AsyncClient, url: str, params: dict[str, Any] | None = None
 ) -> httpx.Response:
     """GET a Semantic Scholar URL with retry on HTTP 429 and timeout/connection errors.
 
@@ -320,9 +319,9 @@ async def _s2_get(
     except Exception as e:
         # Convert arXiv-prefixed errors to Semantic Scholar equivalents for this tool
         from ..arxiv_api import (
+            ArxivConnectionError,
             ArxivRateLimitError,
             ArxivTimeoutError,
-            ArxivConnectionError,
         )
 
         if isinstance(e, ArxivRateLimitError):
@@ -348,7 +347,7 @@ async def _s2_get(
         raise
 
 
-def _extract_citations(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _extract_citations(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Extract citations list from paper endpoint response."""
     citations = payload.get("citations", {})
     if isinstance(citations, dict):
@@ -360,7 +359,7 @@ def _extract_citations(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     return []
 
 
-def _extract_references(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _extract_references(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Extract references list from paper endpoint response."""
     references = payload.get("references", {})
     if isinstance(references, dict):
@@ -389,7 +388,7 @@ def _rate_limited_response(
     max_citations: int | None = None,
     message: str | None = None,
     status_code: int | None = None,
-) -> List[types.TextContent]:
+) -> list[types.TextContent]:
     """Build the soft rate-limited tool response."""
     return [
         types.TextContent(
@@ -407,7 +406,7 @@ def _rate_limited_response(
     ]
 
 
-async def handle_citation_graph(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_citation_graph(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Handle citation graph lookup for a single arXiv paper ID.
 
     This function:
@@ -573,4 +572,4 @@ async def handle_citation_graph(arguments: Dict[str, Any]) -> List[types.TextCon
         ]
     except Exception as exc:
         logger.error("Citation graph error: %s", exc)
-        return [types.TextContent(type="text", text=f"Error: {str(exc)}")]
+        return [types.TextContent(type="text", text=f"Error: {exc!s}")]

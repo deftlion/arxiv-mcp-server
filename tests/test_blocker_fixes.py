@@ -10,9 +10,9 @@ import httpx
 import pytest
 
 from arxiv_mcp_server.arxiv_api import (
-    retry_with_backoff,
     ArxivRateLimitError,
     ArxivTimeoutError,
+    retry_with_backoff,
 )
 
 
@@ -99,10 +99,10 @@ class TestBlockerFixes:
     @pytest.mark.asyncio
     async def test_pdf_timeout_honest_error(self):
         """Blocker 8: PDF timeout returns ArxivTimeoutError (honest timeout), not rate_limited."""
-        from arxiv_mcp_server.arxiv_api import stream_pdf_to_path
-        from pathlib import Path
         import tempfile
-        import itertools
+        from pathlib import Path
+
+        from arxiv_mcp_server.arxiv_api import stream_pdf_to_path
 
         # Create mock paper
         mock_paper = MagicMock()
@@ -114,7 +114,7 @@ class TestBlockerFixes:
             # Mock time module to avoid real sleeps
             with (
                 patch("time.monotonic") as mock_monotonic,
-                patch("time.sleep") as mock_sleep,
+                patch("time.sleep"),
             ):
                 # Use infinite counter for monotonic time (0.1s increments)
                 mock_monotonic.side_effect = (x * 0.1 for x in itertools.count())
@@ -199,12 +199,13 @@ class TestBlockerFixes:
     @pytest.mark.asyncio
     async def test_http_date_retry_after_html_path(self):
         """Blocker 9: HTTP-date Retry-After parsing on HTML path (returns None for PDF fallback)."""
-        from arxiv_mcp_server.tools.download import _fetch_html_content_single_attempt
-        from email.utils import formatdate
         import datetime
+        from email.utils import formatdate
+
+        from arxiv_mcp_server.tools.download import _fetch_html_content_single_attempt
 
         # Create HTTP-date for a specific time in the future
-        future_dt = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
+        future_dt = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
             seconds=120
         )
         http_date = formatdate(timeval=future_dt.timestamp(), usegmt=True)
@@ -223,17 +224,15 @@ class TestBlockerFixes:
     @pytest.mark.asyncio
     async def test_http_date_retry_after_pdf_path(self):
         """PDF path should parse HTTP-date Retry-After without ValueError."""
-        from arxiv_mcp_server.arxiv_api import stream_pdf_to_path
-        from pathlib import Path
+        import datetime
         import tempfile
         from email.utils import formatdate
-        import datetime
-        import itertools
+        from pathlib import Path
+
+        from arxiv_mcp_server.arxiv_api import stream_pdf_to_path
 
         # Create HTTP-date for a specific time in the future
-        future_dt = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
-            seconds=90
-        )
+        future_dt = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=90)
         http_date = formatdate(timeval=future_dt.timestamp(), usegmt=True)
 
         mock_paper = MagicMock()
@@ -250,7 +249,7 @@ class TestBlockerFixes:
 
             with (
                 patch("time.monotonic") as mock_monotonic,
-                patch("time.sleep") as mock_sleep,
+                patch("time.sleep"),
             ):
                 # Use infinite counter for monotonic time
                 mock_monotonic.side_effect = (x * 0.1 for x in itertools.count())
@@ -291,7 +290,6 @@ class TestLatexRateLimiting:
     async def test_latex_406_rate_limited_one_call(self):
         """LaTeX 406 should give rate_limited after 1 call with 600s retry_after."""
         from arxiv_mcp_server.tools.latex import handle_get_paper_latex
-        import itertools
 
         request = httpx.Request("GET", "https://arxiv.org/e-print/2103.14030")
         response_406 = httpx.Response(406, request=request)
@@ -299,39 +297,38 @@ class TestLatexRateLimiting:
         with (
             patch("time.monotonic", side_effect=(x * 0.1 for x in itertools.count())),
             patch("time.sleep") as mock_sleep,
+            patch("httpx.Client") as mock_client_cls,
         ):
-            with patch("httpx.Client") as mock_client_cls:
-                mock_client = MagicMock()
-                mock_stream = MagicMock()
-                mock_stream.__enter__ = MagicMock()
-                mock_stream.__enter__.return_value.raise_for_status = MagicMock(
-                    side_effect=httpx.HTTPStatusError(
-                        "406", request=request, response=response_406
-                    )
+            mock_client = MagicMock()
+            mock_stream = MagicMock()
+            mock_stream.__enter__ = MagicMock()
+            mock_stream.__enter__.return_value.raise_for_status = MagicMock(
+                side_effect=httpx.HTTPStatusError(
+                    "406", request=request, response=response_406
                 )
-                mock_stream.__exit__ = MagicMock(return_value=False)
-                mock_client.stream.return_value = mock_stream
-                mock_client.__enter__ = MagicMock(return_value=mock_client)
-                mock_client.__exit__ = MagicMock(return_value=False)
-                mock_client_cls.return_value = mock_client
+            )
+            mock_stream.__exit__ = MagicMock(return_value=False)
+            mock_client.stream.return_value = mock_stream
+            mock_client.__enter__ = MagicMock(return_value=mock_client)
+            mock_client.__exit__ = MagicMock(return_value=False)
+            mock_client_cls.return_value = mock_client
 
-                # Should return rate_limited response immediately, not retry
-                result = await handle_get_paper_latex({"paper_id": "2103.14030"})
-                payload = json.loads(result[0].text)
+            # Should return rate_limited response immediately, not retry
+            result = await handle_get_paper_latex({"paper_id": "2103.14030"})
+            payload = json.loads(result[0].text)
 
-                assert payload["status"] == "rate_limited"
-                assert payload["http_status"] == 406
-                assert payload["retry_after_seconds"] == 600.0
-                assert "rate limiting" in payload["message"].lower()
-                # Should not have retried or slept
-                mock_sleep.assert_not_called()
+            assert payload["status"] == "rate_limited"
+            assert payload["http_status"] == 406
+            assert payload["retry_after_seconds"] == 600.0
+            assert "rate limiting" in payload["message"].lower()
+            # Should not have retried or slept
+            mock_sleep.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_latex_429_rate_limited_one_call(self):
         """LaTeX 429 should give rate_limited after 1 call, honoring Retry-After."""
-        from arxiv_mcp_server.tools.latex import handle_get_paper_latex
         from arxiv_mcp_server import arxiv_api
-        import itertools
+        from arxiv_mcp_server.tools.latex import handle_get_paper_latex
 
         request = httpx.Request("GET", "https://arxiv.org/e-print/2103.14030")
         response_429 = httpx.Response(
@@ -344,42 +341,41 @@ class TestLatexRateLimiting:
             patch.object(
                 arxiv_api.ARXIV_RATE_LIMITER, "run_sync", side_effect=lambda f: f()
             ),
+            patch("httpx.Client") as mock_client_cls,
         ):
-            with patch("httpx.Client") as mock_client_cls:
-                mock_client = MagicMock()
-                mock_stream = MagicMock()
-                mock_stream.__enter__ = MagicMock()
-                mock_stream.__enter__.return_value.raise_for_status = MagicMock(
-                    side_effect=httpx.HTTPStatusError(
-                        "429", request=request, response=response_429
-                    )
+            mock_client = MagicMock()
+            mock_stream = MagicMock()
+            mock_stream.__enter__ = MagicMock()
+            mock_stream.__enter__.return_value.raise_for_status = MagicMock(
+                side_effect=httpx.HTTPStatusError(
+                    "429", request=request, response=response_429
                 )
-                mock_stream.__exit__ = MagicMock(return_value=False)
-                mock_client.stream.return_value = mock_stream
-                mock_client.__enter__ = MagicMock(return_value=mock_client)
-                mock_client.__exit__ = MagicMock(return_value=False)
-                mock_client_cls.return_value = mock_client
+            )
+            mock_stream.__exit__ = MagicMock(return_value=False)
+            mock_client.stream.return_value = mock_stream
+            mock_client.__enter__ = MagicMock(return_value=mock_client)
+            mock_client.__exit__ = MagicMock(return_value=False)
+            mock_client_cls.return_value = mock_client
 
-                # Should return rate_limited response immediately, not retry
-                result = await handle_get_paper_latex({"paper_id": "2103.14030"})
-                payload = json.loads(result[0].text)
+            # Should return rate_limited response immediately, not retry
+            result = await handle_get_paper_latex({"paper_id": "2103.14030"})
+            payload = json.loads(result[0].text)
 
-                assert payload["status"] == "rate_limited"
-                assert payload["http_status"] == 429
-                assert payload["retry_after_seconds"] == 120.0
-                assert "rate limiting" in payload["message"].lower()
-                assert "120 seconds" in payload["message"]
-                # Should not have retried or slept
-                mock_sleep.assert_not_called()
-                # Should only make 1 HTTP call
-                assert mock_client.stream.call_count == 1
+            assert payload["status"] == "rate_limited"
+            assert payload["http_status"] == 429
+            assert payload["retry_after_seconds"] == 120.0
+            assert "rate limiting" in payload["message"].lower()
+            assert "120 seconds" in payload["message"]
+            # Should not have retried or slept
+            mock_sleep.assert_not_called()
+            # Should only make 1 HTTP call
+            assert mock_client.stream.call_count == 1
 
     @pytest.mark.asyncio
     async def test_latex_503_rate_limited_one_call(self):
         """LaTeX 503 should give rate_limited after 1 call with 60s retry_after."""
-        from arxiv_mcp_server.tools.latex import handle_get_paper_latex
         from arxiv_mcp_server import arxiv_api
-        import itertools
+        from arxiv_mcp_server.tools.latex import handle_get_paper_latex
 
         request = httpx.Request("GET", "https://arxiv.org/e-print/2103.14030")
         response_503 = httpx.Response(503, request=request)
@@ -390,34 +386,34 @@ class TestLatexRateLimiting:
             patch.object(
                 arxiv_api.ARXIV_RATE_LIMITER, "run_sync", side_effect=lambda f: f()
             ),
+            patch("httpx.Client") as mock_client_cls,
         ):
-            with patch("httpx.Client") as mock_client_cls:
-                mock_client = MagicMock()
-                mock_stream = MagicMock()
-                mock_stream.__enter__ = MagicMock()
-                mock_stream.__enter__.return_value.raise_for_status = MagicMock(
-                    side_effect=httpx.HTTPStatusError(
-                        "503", request=request, response=response_503
-                    )
+            mock_client = MagicMock()
+            mock_stream = MagicMock()
+            mock_stream.__enter__ = MagicMock()
+            mock_stream.__enter__.return_value.raise_for_status = MagicMock(
+                side_effect=httpx.HTTPStatusError(
+                    "503", request=request, response=response_503
                 )
-                mock_stream.__exit__ = MagicMock(return_value=False)
-                mock_client.stream.return_value = mock_stream
-                mock_client.__enter__ = MagicMock(return_value=mock_client)
-                mock_client.__exit__ = MagicMock(return_value=False)
-                mock_client_cls.return_value = mock_client
+            )
+            mock_stream.__exit__ = MagicMock(return_value=False)
+            mock_client.stream.return_value = mock_stream
+            mock_client.__enter__ = MagicMock(return_value=mock_client)
+            mock_client.__exit__ = MagicMock(return_value=False)
+            mock_client_cls.return_value = mock_client
 
-                # Should return rate_limited response immediately, not retry
-                result = await handle_get_paper_latex({"paper_id": "2103.14030"})
-                payload = json.loads(result[0].text)
+            # Should return rate_limited response immediately, not retry
+            result = await handle_get_paper_latex({"paper_id": "2103.14030"})
+            payload = json.loads(result[0].text)
 
-                assert payload["status"] == "rate_limited"
-                assert payload["http_status"] == 503
-                assert payload["retry_after_seconds"] == 60.0
-                assert "rate limiting" in payload["message"].lower()
-                # Should not have retried or slept
-                mock_sleep.assert_not_called()
-                # Should only make 1 HTTP call
-                assert mock_client.stream.call_count == 1
+            assert payload["status"] == "rate_limited"
+            assert payload["http_status"] == 503
+            assert payload["retry_after_seconds"] == 60.0
+            assert "rate limiting" in payload["message"].lower()
+            # Should not have retried or slept
+            mock_sleep.assert_not_called()
+            # Should only make 1 HTTP call
+            assert mock_client.stream.call_count == 1
 
 
 class TestNewBlockerFixes:
@@ -426,9 +422,11 @@ class TestNewBlockerFixes:
     @pytest.mark.asyncio
     async def test_latex_trickle_bounded_by_budget(self):
         """LaTeX trickling body is cut off by wall-clock deadline."""
-        from arxiv_mcp_server.tools.latex_archive import _download_source_archive
-        from arxiv_mcp_server.tools.latex_archive import LatexSourceError
         from arxiv_mcp_server import arxiv_api
+        from arxiv_mcp_server.tools.latex_archive import (
+            LatexSourceError,
+            _download_source_archive,
+        )
 
         # Mock a trickling stream that yields 1 byte at a time indefinitely
         class TricklingStream:
@@ -441,7 +439,7 @@ class TestNewBlockerFixes:
 
         with (
             patch("time.monotonic") as mock_monotonic,
-            patch("time.sleep") as mock_sleep,
+            patch("time.sleep"),
             patch.object(
                 arxiv_api.ARXIV_RATE_LIMITER, "run_sync", side_effect=lambda f: f()
             ),
@@ -483,9 +481,10 @@ class TestNewBlockerFixes:
     @pytest.mark.asyncio
     async def test_pdf_trickle_bounded_by_budget(self):
         """PDF trickling body is cut off by wall-clock deadline."""
-        from arxiv_mcp_server.arxiv_api import stream_pdf_to_path, ArxivTimeoutError
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from arxiv_mcp_server.arxiv_api import ArxivTimeoutError, stream_pdf_to_path
 
         mock_paper = MagicMock()
         mock_paper.get_short_id.return_value = "2103.14030"
@@ -504,7 +503,7 @@ class TestNewBlockerFixes:
 
             with (
                 patch("time.monotonic") as mock_monotonic,
-                patch("time.sleep") as mock_sleep,
+                patch("time.sleep"),
             ):
                 call_count = [-1]  # Start at -1 so first call returns 0.0
 
@@ -541,18 +540,17 @@ class TestNewBlockerFixes:
 
                     # Should be caught by deadline check in iter_raw loop
                     error_msg = str(exc_info.value).lower()
-                    assert (
-                        "exceeded deadline" in error_msg or "trickle" in error_msg
-                    ), f"Expected deadline/trickle error, got: {exc_info.value}"
+                    assert "exceeded deadline" in error_msg or "trickle" in error_msg, (
+                        f"Expected deadline/trickle error, got: {exc_info.value}"
+                    )
 
     @pytest.mark.asyncio
     async def test_html_plus_pdf_stall_single_budget(self):
         """HTML stall + PDF stall must complete within single deadline."""
+        from arxiv_mcp_server import arxiv_api
         from arxiv_mcp_server.tools.download import (
             _fetch_html_content,
-            _fetch_pdf_content,
         )
-        from arxiv_mcp_server import arxiv_api
 
         # Mock HTML to return None (triggering PDF fallback)
         with patch(
@@ -566,7 +564,7 @@ class TestNewBlockerFixes:
 
             with (
                 patch("time.monotonic") as mock_monotonic,
-                patch("time.sleep") as mock_sleep,
+                patch("time.sleep"),
                 patch.object(
                     arxiv_api.ARXIV_RATE_LIMITER, "run_sync", side_effect=lambda f: f()
                 ),

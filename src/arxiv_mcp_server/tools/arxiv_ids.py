@@ -8,7 +8,6 @@ reach the arXiv API.
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 # Matches both new-style (YYMM.NNNNN) and old-style (cat/YYMMNNN) arXiv IDs,
 # with optional version suffix (v1, v2, …).
@@ -51,7 +50,7 @@ def normalize_arxiv_id(raw: str) -> str:
     return value
 
 
-def parse_arxiv_id(raw: str) -> Optional[str]:
+def parse_arxiv_id(raw: str) -> str | None:
     """Normalize *raw* and return it only if it is a valid arXiv ID."""
     if not isinstance(raw, str):
         return None
@@ -61,7 +60,7 @@ def parse_arxiv_id(raw: str) -> Optional[str]:
     return normalized
 
 
-def arxiv_version_suffix(paper_id: str) -> Optional[str]:
+def arxiv_version_suffix(paper_id: str) -> str | None:
     """Return the trailing ``vN`` suffix (lowercased), or None if absent."""
     match = _VERSION_SUFFIX_RE.search(paper_id)
     if not match:

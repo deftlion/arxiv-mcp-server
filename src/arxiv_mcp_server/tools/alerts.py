@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-import mcp.types as types
-from mcp.types import ToolAnnotations
+from typing import Any
 
 from dateutil import parser
+from mcp import types
+from mcp.types import ToolAnnotations
 
 from ..config import Settings
 from .search import (
@@ -157,7 +156,7 @@ def _watch_file_path() -> Path:
     return Path(settings.STORAGE_PATH) / WATCH_FILE_NAME
 
 
-def _load_watches() -> Dict[str, Any]:
+def _load_watches() -> dict[str, Any]:
     """Load watch storage from disk."""
     watch_file = _watch_file_path()
     if not watch_file.exists():
@@ -170,26 +169,26 @@ def _load_watches() -> Dict[str, Any]:
         return {"topics": []}
 
 
-def _save_watches(payload: Dict[str, Any]) -> None:
+def _save_watches(payload: dict[str, Any]) -> None:
     """Persist watches to disk."""
     _watch_file_path().write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def _now_iso() -> str:
     """UTC timestamp in ISO format."""
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _filter_by_topic(
-    topics: List[Dict[str, Any]], topic_name: Optional[str]
-) -> List[Dict[str, Any]]:
+    topics: list[dict[str, Any]], topic_name: str | None
+) -> list[dict[str, Any]]:
     """Filter watched topics by exact topic name if provided."""
     if not topic_name:
         return topics
     return [topic for topic in topics if topic.get("topic") == topic_name]
 
 
-def _is_new_paper(published_value: str, last_checked: Optional[str]) -> bool:
+def _is_new_paper(published_value: str, last_checked: str | None) -> bool:
     """Check if paper is newer than the last check timestamp."""
     if not last_checked:
         return True
@@ -200,10 +199,10 @@ def _is_new_paper(published_value: str, last_checked: Optional[str]) -> bool:
         return True
 
 
-def _newest_published(papers: List[Dict[str, Any]]) -> Optional[str]:
+def _newest_published(papers: list[dict[str, Any]]) -> str | None:
     """Return the published timestamp of the newest paper in the list."""
-    newest_value: Optional[str] = None
-    newest_dt: Optional[datetime] = None
+    newest_value: str | None = None
+    newest_dt: datetime | None = None
     for paper in papers:
         published = paper.get("published") or ""
         try:
@@ -219,8 +218,8 @@ def _newest_published(papers: List[Dict[str, Any]]) -> Optional[str]:
 def _page_is_truncated(
     returned: int,
     max_results: int,
-    total_results: Optional[int],
-    new_count: Optional[int] = None,
+    total_results: int | None,
+    new_count: int | None = None,
     start: int = 0,
 ) -> bool:
     """True when max_results or OpenSearch total indicates more papers remain.
@@ -234,18 +233,16 @@ def _page_is_truncated(
         return total_results > (start + returned)
     if returned >= max_results > 0:
         return True
-    if new_count is not None and new_count >= max_results > 0:
-        return True
-    return False
+    return bool(new_count is not None and new_count >= max_results > 0)
 
 
-def _clear_drain_cursor(topic: Dict[str, Any]) -> None:
+def _clear_drain_cursor(topic: dict[str, Any]) -> None:
     """Reset pagination fields used while draining a truncated watch window."""
     topic.pop("drain_from", None)
     topic.pop("check_start", None)
 
 
-async def handle_watch_topic(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_watch_topic(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Save or update a watched topic definition."""
     try:
         topic = (arguments.get("topic") or "").strip()
@@ -317,10 +314,10 @@ async def handle_watch_topic(arguments: Dict[str, Any]) -> List[types.TextConten
         ]
     except Exception as exc:
         logger.error("watch_topic error: %s", exc)
-        return [types.TextContent(type="text", text=f"Error: {str(exc)}")]
+        return [types.TextContent(type="text", text=f"Error: {exc!s}")]
 
 
-async def handle_check_alerts(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_check_alerts(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Check all watched topics (or one topic) for newly published papers."""
     try:
         selected_topic = (arguments.get("topic") or "").strip() or None
@@ -343,7 +340,7 @@ async def handle_check_alerts(arguments: Dict[str, Any]) -> List[types.TextConte
             ]
 
         now_iso = _now_iso()
-        alerts: List[Dict[str, Any]] = []
+        alerts: list[dict[str, Any]] = []
 
         for topic in topics:
             topic_query = topic.get("topic", "")
@@ -435,10 +432,10 @@ async def handle_check_alerts(arguments: Dict[str, Any]) -> List[types.TextConte
         )
     except Exception as exc:
         logger.error("check_alerts error: %s", exc)
-        return [types.TextContent(type="text", text=f"Error: {str(exc)}")]
+        return [types.TextContent(type="text", text=f"Error: {exc!s}")]
 
 
-async def handle_list_watches(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_list_watches(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Return saved watches without updating last_checked."""
     try:
         payload = _load_watches()
@@ -451,10 +448,10 @@ async def handle_list_watches(arguments: Dict[str, Any]) -> List[types.TextConte
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
     except Exception as exc:
         logger.error("list_watches error: %s", exc)
-        return [types.TextContent(type="text", text=f"Error: {str(exc)}")]
+        return [types.TextContent(type="text", text=f"Error: {exc!s}")]
 
 
-async def handle_unwatch_topic(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_unwatch_topic(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Delete a watched topic by exact topic string."""
     try:
         topic = (arguments.get("topic") or "").strip()
@@ -502,4 +499,4 @@ async def handle_unwatch_topic(arguments: Dict[str, Any]) -> List[types.TextCont
         ]
     except Exception as exc:
         logger.error("unwatch_topic error: %s", exc)
-        return [types.TextContent(type="text", text=f"Error: {str(exc)}")]
+        return [types.TextContent(type="text", text=f"Error: {exc!s}")]

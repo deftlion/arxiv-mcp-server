@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import posixpath
 import re
+from dataclasses import dataclass
 
 from .latex_archive import (
     SourceArchiveLimitError,

@@ -1,7 +1,8 @@
 """Integration tests for prompt functionality."""
 
 import pytest
-from arxiv_mcp_server.prompts.handlers import list_prompts, get_prompt
+
+from arxiv_mcp_server.prompts.handlers import get_prompt, list_prompts
 
 
 @pytest.mark.asyncio

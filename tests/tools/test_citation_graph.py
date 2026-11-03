@@ -1,5 +1,6 @@
 """Tests for citation graph tool."""
 
+import asyncio
 import json
 import shutil
 import time
@@ -170,9 +171,7 @@ async def test_citation_graph_retries_on_429_then_succeeds():
 
     with (
         patch("httpx.AsyncClient", return_value=mock_client),
-        patch.object(
-            citation_graph_module.asyncio, "sleep", new_callable=AsyncMock
-        ) as sleep,
+        patch.object(asyncio, "sleep", new_callable=AsyncMock) as sleep,
         patch("random.random", return_value=0.5),
         patch.object(citation_graph_module, "_cache_dir") as mock_cache_dir,
     ):
@@ -199,7 +198,7 @@ async def test_citation_graph_429_exhausted_returns_soft_rate_limited():
 
     with (
         patch("httpx.AsyncClient", return_value=mock_client),
-        patch.object(citation_graph_module.asyncio, "sleep", new_callable=AsyncMock),
+        patch.object(asyncio, "sleep", new_callable=AsyncMock),
         patch("random.random", return_value=0.5),
         patch.object(citation_graph_module, "_cache_dir") as mock_cache_dir,
     ):
@@ -236,7 +235,7 @@ async def test_citation_graph_429_exhausted_with_api_key_guidance():
 
     with (
         patch("httpx.AsyncClient", return_value=mock_client),
-        patch.object(citation_graph_module.asyncio, "sleep", new_callable=AsyncMock),
+        patch.object(asyncio, "sleep", new_callable=AsyncMock),
         patch.object(
             citation_graph_module.settings, "SEMANTIC_SCHOLAR_API_KEY", "s2-key"
         ),
@@ -265,7 +264,7 @@ async def test_citation_graph_503_shows_service_unavailable_message():
 
     with (
         patch("httpx.AsyncClient", return_value=mock_client),
-        patch.object(citation_graph_module.asyncio, "sleep", new_callable=AsyncMock),
+        patch.object(asyncio, "sleep", new_callable=AsyncMock),
         patch("random.random", return_value=0.5),
         patch.object(citation_graph_module, "_cache_dir") as mock_cache_dir,
     ):
@@ -579,7 +578,7 @@ async def test_citation_graph_cache_rate_limited_expires_quickly():
 
     with (
         patch("httpx.AsyncClient", return_value=mock_client),
-        patch.object(citation_graph_module.asyncio, "sleep", new_callable=AsyncMock),
+        patch.object(asyncio, "sleep", new_callable=AsyncMock),
         patch("random.random", return_value=0.5),
         patch.object(citation_graph_module, "_cache_dir") as mock_cache_dir,
         patch.object(citation_graph_module, "CACHE_TTL_RATE_LIMITED_SECONDS", 0.1),
@@ -596,7 +595,7 @@ async def test_citation_graph_cache_rate_limited_expires_quickly():
         assert mock_client.get.call_count == attempts
 
         # Wait for cache to expire
-        time.sleep(0.2)
+        time.sleep(0.2)  # noqa: ASYNC251
 
         # Second call: cache expired, new API call succeeds
         response2 = await handle_citation_graph({"paper_id": "2401.12345"})
@@ -623,7 +622,7 @@ async def test_citation_graph_rate_limited_cached_not_as_empty_success():
 
     with (
         patch("httpx.AsyncClient", return_value=mock_client),
-        patch.object(citation_graph_module.asyncio, "sleep", new_callable=AsyncMock),
+        patch.object(asyncio, "sleep", new_callable=AsyncMock),
         patch("random.random", return_value=0.5),
         patch.object(citation_graph_module, "_cache_dir") as mock_cache_dir,
     ):
@@ -713,13 +712,14 @@ async def test_citation_graph_cache_can_serve_smaller_limit():
 @pytest.mark.asyncio
 async def test_s2_503_response_excludes_warning_and_hint():
     """S2 503 (service unavailable) should not show generic rate-limit warning or API key hint."""
+    import json
+    from unittest.mock import patch
+
     from arxiv_mcp_server.tools import citation_graph as cg_module
     from arxiv_mcp_server.tools.citation_graph import (
-        handle_citation_graph,
         SemanticScholarRateLimitError,
+        handle_citation_graph,
     )
-    from unittest.mock import AsyncMock, patch
-    import json
 
     # Mock _s2_get to raise SemanticScholarRateLimitError with 503
     async def mock_fetch_503_with_status(*args, **kwargs):

@@ -2,22 +2,22 @@
 
 import json
 import logging
-from typing import Any, Dict, List
+import xml.etree.ElementTree as ET
+from typing import Any
 
-import mcp.types as types
+import httpx
+from mcp import types
 from mcp.types import ToolAnnotations
 
+from ..arxiv_api import ArxivRateLimitError
+from ..config import Settings
 from .arxiv_ids import parse_arxiv_id
 from .content import CONTENT_WARNING
 from .search import (
-    _rate_limited_get,
     ARXIV_API_URL,
+    _rate_limited_get,
     _rate_limited_response,
 )
-from ..arxiv_api import ArxivRateLimitError
-from ..config import Settings
-import httpx
-import xml.etree.ElementTree as ET
 
 logger = logging.getLogger("arxiv-mcp-server")
 settings = Settings()
@@ -45,7 +45,7 @@ abstract_tool = types.Tool(
 )
 
 
-async def handle_get_abstract(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_get_abstract(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Fetch paper metadata via arXiv API without downloading the full paper."""
     try:
         raw_id = arguments["paper_id"]

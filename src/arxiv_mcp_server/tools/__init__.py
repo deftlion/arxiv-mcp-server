@@ -1,82 +1,82 @@
 """Tool definitions for the arXiv MCP server."""
 
-from .search import search_tool, handle_search
-from .download import download_tool, handle_download
-from .list_papers import list_tool, handle_list_papers
-from .read_paper import read_tool, handle_read_paper
-from .get_abstract import abstract_tool, handle_get_abstract
-from .semantic_search import (
-    semantic_search_tool,
-    handle_semantic_search,
-    reindex_tool,
-    handle_reindex,
-)
-from .citation_graph import citation_graph_tool, handle_citation_graph
-from .export_citations import export_citations_tool, handle_export_citations
 from .alerts import (
-    watch_topic_tool,
-    handle_watch_topic,
     check_alerts_tool,
     handle_check_alerts,
-    list_watches_tool,
     handle_list_watches,
-    unwatch_topic_tool,
     handle_unwatch_topic,
+    handle_watch_topic,
+    list_watches_tool,
+    unwatch_topic_tool,
+    watch_topic_tool,
 )
-from .paper_outline import (
-    outline_tool,
-    handle_get_paper_outline,
-    read_section_tool,
-    handle_read_paper_section,
-    search_text_tool,
-    handle_search_paper_text,
-)
+from .citation_graph import citation_graph_tool, handle_citation_graph
+from .download import download_tool, handle_download
+from .export_citations import export_citations_tool, handle_export_citations
+from .get_abstract import abstract_tool, handle_get_abstract
 from .latex import (
+    get_paper_latex_section_tool,
     get_paper_latex_tool,
     handle_get_paper_latex,
-    list_paper_latex_sections_tool,
-    handle_list_paper_latex_sections,
-    get_paper_latex_section_tool,
     handle_get_paper_latex_section,
+    handle_list_paper_latex_sections,
+    list_paper_latex_sections_tool,
+)
+from .list_papers import handle_list_papers, list_tool
+from .paper_outline import (
+    handle_get_paper_outline,
+    handle_read_paper_section,
+    handle_search_paper_text,
+    outline_tool,
+    read_section_tool,
+    search_text_tool,
+)
+from .read_paper import handle_read_paper, read_tool
+from .search import handle_search, search_tool
+from .semantic_search import (
+    handle_reindex,
+    handle_semantic_search,
+    reindex_tool,
+    semantic_search_tool,
 )
 
 __all__ = [
-    "search_tool",
-    "download_tool",
-    "list_tool",
-    "read_tool",
     "abstract_tool",
-    "handle_search",
-    "handle_download",
-    "handle_list_papers",
-    "handle_read_paper",
-    "handle_get_abstract",
-    "semantic_search_tool",
-    "handle_semantic_search",
-    "reindex_tool",
-    "handle_reindex",
-    "citation_graph_tool",
-    "handle_citation_graph",
-    "export_citations_tool",
-    "handle_export_citations",
-    "watch_topic_tool",
-    "handle_watch_topic",
     "check_alerts_tool",
-    "handle_check_alerts",
-    "list_watches_tool",
-    "handle_list_watches",
-    "unwatch_topic_tool",
-    "handle_unwatch_topic",
-    "get_paper_latex_tool",
-    "handle_get_paper_latex",
-    "list_paper_latex_sections_tool",
-    "handle_list_paper_latex_sections",
+    "citation_graph_tool",
+    "download_tool",
+    "export_citations_tool",
     "get_paper_latex_section_tool",
+    "get_paper_latex_tool",
+    "handle_check_alerts",
+    "handle_citation_graph",
+    "handle_download",
+    "handle_export_citations",
+    "handle_get_abstract",
+    "handle_get_paper_latex",
     "handle_get_paper_latex_section",
-    "outline_tool",
     "handle_get_paper_outline",
-    "read_section_tool",
+    "handle_list_paper_latex_sections",
+    "handle_list_papers",
+    "handle_list_watches",
+    "handle_read_paper",
     "handle_read_paper_section",
-    "search_text_tool",
+    "handle_reindex",
+    "handle_search",
     "handle_search_paper_text",
+    "handle_semantic_search",
+    "handle_unwatch_topic",
+    "handle_watch_topic",
+    "list_paper_latex_sections_tool",
+    "list_tool",
+    "list_watches_tool",
+    "outline_tool",
+    "read_section_tool",
+    "read_tool",
+    "reindex_tool",
+    "search_text_tool",
+    "search_tool",
+    "semantic_search_tool",
+    "unwatch_topic_tool",
+    "watch_topic_tool",
 ]

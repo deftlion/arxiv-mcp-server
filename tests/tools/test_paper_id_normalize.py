@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from arxiv_mcp_server.tools.get_abstract import handle_get_abstract
 from arxiv_mcp_server.tools import export_citations as ec
+from arxiv_mcp_server.tools.get_abstract import handle_get_abstract
 
 FULL_ATOM_XML = """\
 <?xml version="1.0" encoding="UTF-8"?>

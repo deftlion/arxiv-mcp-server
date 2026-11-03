@@ -2,9 +2,11 @@
 
 import json
 from pathlib import Path
-from typing import Dict, Any, List
-import mcp.types as types
+from typing import Any
+
+from mcp import types
 from mcp.types import ToolAnnotations
+
 from ..config import Settings
 from .arxiv_ids import (
     arxiv_version_suffix,
@@ -13,7 +15,7 @@ from .arxiv_ids import (
     normalize_arxiv_id,
     parse_arxiv_id,
 )
-from .content import add_content_payload, CONTENT_WARNING
+from .content import CONTENT_WARNING, add_content_payload
 from .list_papers import (
     _sidecar_arxiv_version,
     cached_storage_labels,
@@ -94,7 +96,7 @@ def _missing_paper_message(
     return f"{base} Locally cached related files: {cached}. {download_hint}"
 
 
-async def handle_read_paper(arguments: Dict[str, Any]) -> List[types.TextContent]:
+async def handle_read_paper(arguments: dict[str, Any]) -> list[types.TextContent]:
     """Handle requests to read a paper's content."""
     try:
         raw_id = arguments["paper_id"]
@@ -160,7 +162,7 @@ async def handle_read_paper(arguments: Dict[str, Any]) -> List[types.TextContent
                 text=json.dumps(
                     {
                         "status": "error",
-                        "message": f"Error reading paper: {str(e)}",
+                        "message": f"Error reading paper: {e!s}",
                     }
                 ),
             )

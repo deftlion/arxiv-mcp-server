@@ -7,14 +7,13 @@ import argparse
 import asyncio
 import json
 import os
-from pathlib import Path
 import stat
 import sys
 import tempfile
 import zipfile
+from pathlib import Path
 
 from mcp import StdioServerParameters
-
 from smoke_installed_wheel import clean_subprocess_env, exercise_mcp_server
 
 ROOT = Path(__file__).resolve().parents[1]

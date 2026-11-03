@@ -4,8 +4,9 @@ import os
 import sys
 from pathlib import Path
 from types import ModuleType
-from arxiv_mcp_server.config import Settings
 from unittest.mock import MagicMock, patch
+
+from arxiv_mcp_server.config import Settings
 
 
 @patch.object(Path, "mkdir")
@@ -57,7 +58,7 @@ def test_storage_path_platform_compatibility(mock_resolve, mock_mkdir):
         mock_mkdir.reset_mock()
 
         # Set up the mock to return the path itself
-        mock_resolve.side_effect = lambda: Path(test_path)
+        mock_resolve.side_effect = lambda: Path(test_path)  # noqa: B023
 
         with patch.object(sys, "argv", ["program", "--storage-path", test_path]):
             settings = Settings()
@@ -148,7 +149,7 @@ def test_package_version_prefers_generated_bundle_version(monkeypatch):
     from arxiv_mcp_server import config
 
     bundle_module = ModuleType("arxiv_mcp_server._bundle_version")
-    setattr(bundle_module, "VERSION", "9.9.9")
+    setattr(bundle_module, "VERSION", "9.9.9")  # noqa: B010
     monkeypatch.setitem(sys.modules, bundle_module.__name__, bundle_module)
     monkeypatch.setattr(config, "version", lambda _name: "0.6.2")
 
@@ -193,7 +194,9 @@ def test_get_arxiv_client_injects_timeout_and_disables_keepalive(monkeypatch):
     """
     import sys
     from unittest.mock import MagicMock, patch
+
     import requests
+
     from arxiv_mcp_server import config
 
     real_session = requests.Session()
@@ -229,6 +232,7 @@ def test_get_arxiv_client_skips_wrapping_without_real_session(monkeypatch):
     """Mocks without a requests.Session must not be touched."""
     import sys
     from unittest.mock import MagicMock
+
     from arxiv_mcp_server import config
 
     fake_client = MagicMock()
