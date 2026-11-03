@@ -16,6 +16,10 @@ uv run black --check .
 uv run pytest
 ```
 
+Also run `ruff check <files>`, `ruff format --check <files>`, and `pyright <files>` on changed Python files. CI enforces only `black --check`, so black wins where `ruff format` disagrees. Existing code has unfixed ruff and pyright errors, so hold only changed lines to a clean result.
+
+Use `fd` instead of `find` and `rg` instead of `grep` for searches.
+
 Apply formatting with:
 
 ```bash
@@ -47,13 +51,14 @@ The process waits for MCP messages on stdin. It is not an interactive CLI.
 - `tests/`: unit and protocol-level tests.
 - `server.json`: official MCP Registry metadata.
 - `manifest.json` and `scripts/build-mcpb.sh`: Claude Desktop MCPB packaging.
+- MCP SDK 2 gotchas: low-level decorators are gone (pass handlers to the `Server` constructor), result fields are snake_case, and `Resource.uri` takes `str`, not `AnyUrl`. The SDK no longer validates tool arguments, so `server.py` does it with prebuilt jsonschema validators.
 
 ## Tool groups
 
-The server registers 16 tools:
+The server registers 19 tools:
 
 - Discovery: `search_papers`, `get_abstract`
-- Full text: `download_paper`, `list_papers`, `read_paper`
+- Full text: `download_paper`, `list_papers`, `read_paper`, `get_paper_outline`, `read_paper_section`, `search_paper_text`
 - Original source: `get_paper_latex`, `list_paper_latex_sections`, `get_paper_latex_section`
 - Graphs and monitoring: `citation_graph`, `watch_topic`, `list_watches`, `check_alerts`, `unwatch_topic`
 - Citation export: `export_citations`
@@ -71,6 +76,7 @@ Keep tool schemas, package exports, server registration, dispatch, tests, and RE
 - Keep Streamable HTTP bound to loopback by default and preserve DNS-rebinding protection.
 - Do not introduce process-global user/session state.
 - Avoid blocking network or filesystem work on the event loop.
+- hatchling packs untracked, non-ignored files into the sdist. After adding local files, inspect `uv build --sdist` output for private paths and binaries.
 
 ## Configuration
 
