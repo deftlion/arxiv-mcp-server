@@ -1,26 +1,31 @@
 """Offline wire-level checks against the MCP SDK 2 stdio and HTTP clients."""
 
 import asyncio
-from contextlib import asynccontextmanager
 import json
 import os
-from pathlib import Path
 import socket
 import sys
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
-from mcp import ClientSession, MCPError, StdioServerParameters
+import pytest
+import uvicorn
+from mcp import ClientSession, MCPError, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
-import pytest
-import uvicorn
 
 from arxiv_mcp_server import server as server_module
 from arxiv_mcp_server.prompts.prompts import PROMPTS
 from arxiv_mcp_server.tools import list_papers as list_module
 from arxiv_mcp_server.tools import read_paper as read_module
 from arxiv_mcp_server.tools.content import DEFAULT_MAX_CHARS
+
+
+def _text(block) -> str:
+    assert isinstance(block, types.TextContent)
+    return block.text
 
 
 @asynccontextmanager
@@ -105,56 +110,53 @@ async def test_sdk2_protocol_surface(transport, tmp_path, monkeypatch):
     content = "Cached offline paper. " * 2000
     (tmp_path / f"{paper_id}.md").write_text(content, encoding="utf-8")
 
-    async with asyncio.timeout(30):
-        async with protocol_transport(transport, tmp_path, monkeypatch) as streams:
-            async with ClientSession(*streams, read_timeout_seconds=10) as session:
-                initialized = await session.initialize()
-                assert (
-                    initialized.server_info.version
-                    == server_module.settings.APP_VERSION
-                )
-                assert initialized.capabilities.tools is not None
-                assert initialized.capabilities.prompts is not None
-                assert initialized.capabilities.resources is None
+    async with (
+        asyncio.timeout(30),
+        protocol_transport(transport, tmp_path, monkeypatch) as streams,
+        ClientSession(*streams, read_timeout_seconds=10) as session,
+    ):
+        initialized = await session.initialize()
+        assert initialized.server_info.version == server_module.settings.APP_VERSION
+        assert initialized.capabilities.tools is not None
+        assert initialized.capabilities.prompts is not None
+        assert initialized.capabilities.resources is None
 
-                tools = await session.list_tools()
-                assert {tool.name for tool in tools.tools} == {
-                    tool.name for tool in server_module.TOOLS
-                }
-                assert all(tool.input_schema for tool in tools.tools)
-                # No output schemas are advertised: results are text blocks, as in v1.
-                assert all(tool.output_schema is None for tool in tools.tools)
+        tools = await session.list_tools()
+        assert {tool.name for tool in tools.tools} == {
+            tool.name for tool in server_module.TOOLS
+        }
+        assert all(tool.input_schema for tool in tools.tools)
+        # No output schemas are advertised: results are text blocks, as in v1.
+        assert all(tool.output_schema is None for tool in tools.tools)
 
-                prompts = await session.list_prompts()
-                assert {prompt.name for prompt in prompts.prompts} == set(PROMPTS)
-                prompt = await session.get_prompt(
-                    "summarize_paper", {"paper_id": paper_id}
-                )
-                assert paper_id in prompt.messages[0].content.text
-                with pytest.raises(MCPError, match="Missing required argument"):
-                    await session.get_prompt("summarize_paper", {})
-                with pytest.raises(MCPError, match="Prompt not found"):
-                    await session.get_prompt("not_a_prompt", {})
+        prompts = await session.list_prompts()
+        assert {prompt.name for prompt in prompts.prompts} == set(PROMPTS)
+        prompt = await session.get_prompt("summarize_paper", {"paper_id": paper_id})
+        assert paper_id in _text(prompt.messages[0].content)
+        with pytest.raises(MCPError, match="Missing required argument"):
+            await session.get_prompt("summarize_paper", {})
+        with pytest.raises(MCPError, match="Prompt not found"):
+            await session.get_prompt("not_a_prompt", {})
 
-                listed = await session.call_tool("list_papers", {})
-                assert not listed.is_error
-                assert paper_id in listed.content[0].text
-                read = await session.call_tool("read_paper", {"paper_id": paper_id})
-                assert not read.is_error
-                payload = json.loads(read.content[0].text)
-                assert payload["returned_chars"] == DEFAULT_MAX_CHARS
-                assert payload["is_truncated"] is True
-                assert payload["next_start"] == DEFAULT_MAX_CHARS
-                assert payload["content_length"] == len(content)
+        listed = await session.call_tool("list_papers", {})
+        assert not listed.is_error
+        assert paper_id in _text(listed.content[0])
+        read = await session.call_tool("read_paper", {"paper_id": paper_id})
+        assert not read.is_error
+        payload = json.loads(_text(read.content[0]))
+        assert payload["returned_chars"] == DEFAULT_MAX_CHARS
+        assert payload["is_truncated"] is True
+        assert payload["next_start"] == DEFAULT_MAX_CHARS
+        assert payload["content_length"] == len(content)
 
-                for name, arguments, error_text in [
-                    ("read_paper", {}, "required property"),
-                    ("read_paper", {"paper_id": 123}, "not of type"),
-                    ("list_papers", {"unexpected": True}, "Additional properties"),
-                    ("not_a_tool", {}, "Unknown tool"),
-                    ("read_paper", {"paper_id": "0000.00000"}, "not found"),
-                ]:
-                    result = await session.call_tool(name, arguments)
-                    assert result.is_error, (name, result)
-                    assert error_text.lower() in result.content[0].text.lower()
-                assert not (await session.call_tool("list_papers")).is_error
+        for name, arguments, error_text in [
+            ("read_paper", {}, "required property"),
+            ("read_paper", {"paper_id": 123}, "not of type"),
+            ("list_papers", {"unexpected": True}, "Additional properties"),
+            ("not_a_tool", {}, "Unknown tool"),
+            ("read_paper", {"paper_id": "0000.00000"}, "not found"),
+        ]:
+            result = await session.call_tool(name, arguments)
+            assert result.is_error, (name, result)
+            assert error_text.lower() in _text(result.content[0]).lower()
+        assert not (await session.call_tool("list_papers")).is_error

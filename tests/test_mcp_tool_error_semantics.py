@@ -1,9 +1,9 @@
 """MCP protocol-level error semantics for tool calls."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 import mcp.types as types
+import pytest
 
 from arxiv_mcp_server import server as server_module
 
@@ -28,11 +28,13 @@ async def test_get_abstract_not_found_sets_mcp_is_error(mocker):
     )
 
     result = await server_module._call_tool(
-        None,
+        MagicMock(),
         types.CallToolRequestParams(
             name="get_abstract", arguments={"paper_id": "0000.00000"}
         ),
     )
 
     assert result.is_error is True
-    assert "Paper 0000.00000 not found on arXiv" in result.content[0].text
+    block = result.content[0]
+    assert isinstance(block, types.TextContent)
+    assert "Paper 0000.00000 not found on arXiv" in block.text

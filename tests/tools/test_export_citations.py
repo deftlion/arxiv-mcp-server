@@ -244,19 +244,24 @@ async def test_all_failed_batch_is_mcp_error_but_keeps_diagnostics(monkeypatch):
     error content so a client can still read per-paper diagnostics. Exercised
     at the protocol level, since calling the handler directly bypasses dispatch.
     """
+    from unittest.mock import MagicMock
+
     import mcp.types as types
+
     from arxiv_mcp_server import server as server_module
 
     _stub_metadata(monkeypatch, [])
     result = await server_module._call_tool(
-        None,
+        MagicMock(),
         types.CallToolRequestParams(
             name="export_citations", arguments={"paper_ids": ["2401.99999"]}
         ),
     )
 
     assert result.is_error is True
-    payload = json.loads(result.content[0].text)
+    block = result.content[0]
+    assert isinstance(block, types.TextContent)
+    payload = json.loads(block.text)
     assert payload["status"] == "error"
     assert payload["count"] == {"requested": 1, "succeeded": 0, "failed": 1}
     assert payload["results"][0]["error"] == "not found on arXiv"

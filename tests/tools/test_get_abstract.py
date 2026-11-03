@@ -126,7 +126,9 @@ def test_abstract_tool_input_schema_has_paper_id():
 
 
 def test_abstract_tool_annotations_readonly():
-    assert abstract_tool.annotations.read_only_hint is True
+    annotations = abstract_tool.annotations
+    assert annotations is not None
+    assert annotations.read_only_hint is True
 
 
 # ---------------------------------------------------------------------------

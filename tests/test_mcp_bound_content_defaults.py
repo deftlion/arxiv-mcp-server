@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import mcp.types as types
 import pytest
@@ -34,14 +35,16 @@ async def test_mcp_read_paper_default_response_is_size_bounded(
     Path(temp_storage_path, f"{paper_id}.md").write_text(content, encoding="utf-8")
 
     result = await server_module._call_tool(
-        None,
+        MagicMock(),
         types.CallToolRequestParams(
             name="read_paper", arguments={"paper_id": paper_id}
         ),
     )
 
     assert result.is_error is False
-    raw = result.content[0].text
+    block = result.content[0]
+    assert isinstance(block, types.TextContent)
+    raw = block.text
     payload = json.loads(raw)
 
     assert payload["status"] == "success"

@@ -69,7 +69,7 @@ logger = logging.getLogger("arxiv-mcp-server")
 logger.setLevel(logging.INFO)
 
 
-TOOLS: List[types.Tool] = [
+TOOLS: list[types.Tool] = [
     search_tool,
     download_tool,
     list_tool,
@@ -203,8 +203,11 @@ async def _call_tool(
             message = f"Input validation error: {error.message}"
         else:
             # Unknown tool names fall through to call_tool's error branch.
-            return types.CallToolResult(content=await call_tool(params.name, arguments))
-    except Exception as exc:
+            return types.CallToolResult(
+                content=list(await call_tool(params.name, arguments))
+            )
+    # Tool failures must reach clients as is_error results, not protocol errors.
+    except Exception as exc:  # noqa: BLE001
         message = str(exc) or type(exc).__name__
     return types.CallToolResult(
         content=[types.TextContent(type="text", text=message)], is_error=True

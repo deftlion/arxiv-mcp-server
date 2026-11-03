@@ -108,6 +108,7 @@ def test_search_papers_schema_semantics_preserved():
     assert props["sort_by"]["enum"] == ["relevance", "date"]
 
     desc = search_tool.description
+    assert desc is not None
     assert "ti:" in desc and "au:" in desc and "abs:" in desc
     assert "categor" in desc.lower()
     assert "YYYY-MM-DD" in desc

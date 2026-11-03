@@ -402,13 +402,17 @@ async def test_check_alerts_known_topic_still_succeeds(monkeypatch, alerts_test_
 
 def test_list_and_unwatch_tool_annotations():
     """list_watches is read-only; unwatch_topic is a write."""
-    assert alerts_module.list_watches_tool.annotations.read_only_hint is True
-    assert alerts_module.unwatch_topic_tool.annotations.read_only_hint is False
+    list_annotations = alerts_module.list_watches_tool.annotations
+    unwatch_annotations = alerts_module.unwatch_topic_tool.annotations
+    assert list_annotations is not None and unwatch_annotations is not None
+    assert list_annotations.read_only_hint is True
+    assert unwatch_annotations.read_only_hint is False
 
 
 def test_check_alerts_tool_annotations_not_readonly():
     """check_alerts mutates last_checked, so it must not be marked read-only."""
     ann = alerts_module.check_alerts_tool.annotations
+    assert ann is not None
     assert ann.read_only_hint is False
     assert ann.idempotent_hint is False
 
